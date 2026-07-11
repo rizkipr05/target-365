@@ -7,6 +7,7 @@ import '../screens/motivasi/motivasi_screen.dart';
 import '../screens/laporan/laporan_screen.dart';
 import '../screens/kalender/kalender_screen.dart';
 import '../screens/profil/profil_screen.dart';
+import '../screens/auth/login_screen.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
@@ -238,9 +239,39 @@ class _MainNavigationState extends State<MainNavigation> {
                 ],
               ),
               const SizedBox(width: 14),
-              InkWell(
-                onTap: () => setState(() => _currentIndex = 6),
-                borderRadius: BorderRadius.circular(8),
+              PopupMenuButton<String>(
+                offset: const Offset(0, 50),
+                onSelected: (value) {
+                  if (value == 'profile') {
+                    setState(() => _currentIndex = 6);
+                  } else if (value == 'logout') {
+                    Navigator.of(context).pushReplacement(
+                      MaterialPageRoute(builder: (_) => const LoginScreen()),
+                    );
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(
+                    value: 'profile',
+                    child: Row(
+                      children: [
+                        Icon(Icons.person_outline, size: 18),
+                        SizedBox(width: 8),
+                        Text('Profil Saya'),
+                      ],
+                    ),
+                  ),
+                  PopupMenuItem(
+                    value: 'logout',
+                    child: Row(
+                      children: [
+                        Icon(Icons.logout, size: 18, color: AppColors.danger),
+                        SizedBox(width: 8),
+                        Text('Keluar', style: TextStyle(color: AppColors.danger)),
+                      ],
+                    ),
+                  ),
+                ],
                 child: Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   child: Row(

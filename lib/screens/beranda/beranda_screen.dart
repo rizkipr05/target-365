@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
+import '../auth/login_screen.dart';
 
 class BerandaScreen extends StatelessWidget {
   final VoidCallback? onProfileTap;
@@ -18,7 +19,7 @@ class BerandaScreen extends StatelessWidget {
               slivers: [
                 if (!isDesktop)
                   SliverToBoxAdapter(
-                    child: _buildHeader(),
+                    child: _buildHeader(context),
                   ),
                 SliverToBoxAdapter(
                   child: _buildGreeting(),
@@ -71,7 +72,7 @@ class BerandaScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader() {
+  Widget _buildHeader(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       color: AppColors.cardBg,
@@ -136,8 +137,39 @@ class BerandaScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(width: 4),
-          GestureDetector(
-            onTap: onProfileTap,
+          PopupMenuButton<String>(
+            offset: const Offset(0, 40),
+            onSelected: (value) {
+              if (value == 'profile') {
+                if (onProfileTap != null) onProfileTap!();
+              } else if (value == 'logout') {
+                Navigator.of(context).pushReplacement(
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
+            },
+            itemBuilder: (context) => const [
+              PopupMenuItem(
+                value: 'profile',
+                child: Row(
+                  children: [
+                    Icon(Icons.person_outline, size: 18),
+                    SizedBox(width: 8),
+                    Text('Profil Saya'),
+                  ],
+                ),
+              ),
+              PopupMenuItem(
+                value: 'logout',
+                child: Row(
+                  children: [
+                    Icon(Icons.logout, size: 18, color: AppColors.danger),
+                    SizedBox(width: 8),
+                    Text('Keluar', style: TextStyle(color: AppColors.danger)),
+                  ],
+                ),
+              ),
+            ],
             child: Container(
               width: 36,
               height: 36,
