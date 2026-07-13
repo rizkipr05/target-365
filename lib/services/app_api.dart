@@ -279,6 +279,35 @@ class AppApi {
     return user;
   }
 
+  Future<SessionUser> register({
+    required String name,
+    required String username,
+    required String email,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    final response = await _requestJson(
+      'POST',
+      'register.php',
+      body: {
+        'name': name,
+        'username': username,
+        'email': email,
+        'password': password,
+        'confirmPassword': confirmPassword,
+      },
+    );
+
+    final user = SessionUser.fromJson(Map<String, dynamic>.from(response.data['user'] ?? const {}));
+    final token = response.data['token']?.toString();
+    if (token == null || token.isEmpty) {
+      throw const ApiException('Token pendaftaran tidak ditemukan');
+    }
+
+    AppSession.instance.update(user: user, token: token);
+    return user;
+  }
+
   Future<AppBootstrap> bootstrap(int userId) async {
     final response = await _requestJson(
       'GET',

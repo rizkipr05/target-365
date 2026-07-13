@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
 import '../../services/app_api.dart';
 import '../../widgets/bottom_nav.dart';
+import 'register_screen.dart';
 
 
 class LoginScreen extends StatefulWidget {
@@ -283,43 +284,23 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 8),
                 _buildPasswordTextField(),
                 const SizedBox(height: 14),
-                // Remember me + Forgot password
-                Wrap(
-                  alignment: WrapAlignment.spaceBetween,
-                  crossAxisAlignment: WrapCrossAlignment.center,
-                  runSpacing: 8,
+                // Remember me
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: Checkbox(
-                            value: _rememberMe,
-                            activeColor: AppColors.primary,
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                            side: const BorderSide(color: AppColors.border, width: 1.5),
-                            onChanged: (v) => setState(() => _rememberMe = v ?? false),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text('Ingat saya', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                      ],
-                    ),
-                    GestureDetector(
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Fitur lupa kata sandi belum tersedia'),
-                          ),
-                        );
-                      },
-                      child: const Text(
-                        'Lupa kata sandi?',
-                        style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600),
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: Checkbox(
+                        value: _rememberMe,
+                        activeColor: AppColors.primary,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        side: const BorderSide(color: AppColors.border, width: 1.5),
+                        onChanged: (v) => setState(() => _rememberMe = v ?? false),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    const Text('Ingat saya', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
                   ],
                 ),
                 const SizedBox(height: 24),
@@ -360,11 +341,19 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         WidgetSpan(
                           child: GestureDetector(
-                            onTap: () {
+                            onTap: () async {
+                              final result = await Navigator.of(context).push<String>(
+                                MaterialPageRoute(builder: (_) => const RegisterScreen()),
+                              );
+                              if (!mounted || result == null || result.isEmpty) {
+                                return;
+                              }
+                              setState(() {
+                                _emailController.text = result;
+                                _passwordController.clear();
+                              });
                               ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text('Pendaftaran akun belum tersedia'),
-                                ),
+                                const SnackBar(content: Text('Akun berhasil dibuat. Silakan masuk.')),
                               );
                             },
                             child: const Text(
