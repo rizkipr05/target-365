@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
 class LaporanScreen extends StatelessWidget {
-  const LaporanScreen({super.key});
+  final AppBootstrap bootstrap;
+
+  const LaporanScreen({super.key, required this.bootstrap});
 
   @override
   Widget build(BuildContext context) {
@@ -86,37 +89,37 @@ class LaporanScreen extends StatelessWidget {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 children: [
-                  const StatCard(
+                  StatCard(
                     iconBg: Color(0xFFDCFCE7),
                     icon: Icons.track_changes_rounded,
                     iconColor: AppColors.primary,
                     title: 'Total Target',
-                    value: '12',
+                    value: '${bootstrap.summary.totalTargets}',
                     subtitle: 'Semua target aktif',
                   ),
-                  const StatCard(
+                  StatCard(
                     iconBg: Color(0xFFEFF6FF),
                     icon: Icons.check_circle_outline_rounded,
                     iconColor: AppColors.secondary,
                     title: 'Selesai',
-                    value: '5',
-                    subtitle: '41.67% dari total',
+                    value: '${bootstrap.summary.completedTargets}',
+                    subtitle: '${bootstrap.summary.completedPercentLabel} dari total',
                   ),
-                  const StatCard(
+                  StatCard(
                     iconBg: Color(0xFFFFFBEB),
                     icon: Icons.timelapse_rounded,
                     iconColor: AppColors.warning,
                     title: 'Sedang Berjalan',
-                    value: '6',
-                    subtitle: '50.00% dari total',
+                    value: '${bootstrap.summary.inProgressTargets}',
+                    subtitle: '${bootstrap.summary.inProgressPercentLabel} dari total',
                   ),
-                  const StatCard(
+                  StatCard(
                     iconBg: Color(0xFFFFF1F2),
                     icon: Icons.radio_button_unchecked_rounded,
                     iconColor: AppColors.danger,
                     title: 'Belum Dimulai',
-                    value: '1',
-                    subtitle: '8.33% dari total',
+                    value: '${bootstrap.summary.notStartedTargets}',
+                    subtitle: '${bootstrap.summary.notStartedPercentLabel} dari total',
                   ),
                   if (isDesktop)
                     _buildAverageCardItem()
@@ -183,6 +186,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildAverageCardItem() {
+    final stats = bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -206,10 +210,8 @@ class LaporanScreen extends StatelessWidget {
           const SizedBox(height: 8),
           const Text('Rata-rata', style: TextStyle(fontSize: 11, color: AppColors.textSecondary, fontWeight: FontWeight.w500)),
           const SizedBox(height: 2),
-          const Text(
-            '62%',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
-          ),
+          Text('${stats.averageCompletion.toStringAsFixed(0)}%',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
           const Text('Dari semua target', style: TextStyle(fontSize: 9, color: AppColors.textMuted)),
         ],
       ),
@@ -305,6 +307,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildDonutChartCard() {
+    final stats = bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -329,33 +332,33 @@ class LaporanScreen extends StatelessWidget {
                     SizedBox(
                       width: 130,
                       height: 130,
-                      child: CircularProgressIndicator(
-                        value: 0.62,
+                    child: CircularProgressIndicator(
+                        value: stats.averageCompletion / 100,
                         strokeWidth: 16,
                         backgroundColor: AppColors.danger.withOpacity(0.3),
                         color: AppColors.primary,
                       ),
                     ),
-                    const Column(
+                    Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text('62%', style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
-                        Text('Selesai', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        Text('${stats.averageCompletion.toStringAsFixed(0)}%', style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary)),
+                        const Text('Selesai', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
                       ],
                     ),
                   ],
                 ),
               ),
               const SizedBox(width: 24),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _LegendItem(color: AppColors.primary, label: 'Selesai', value: '41.67% (5 target)'),
+                    _LegendItem(color: AppColors.primary, label: 'Selesai', value: '${stats.completedPercentLabel} (${stats.completedTargets} target)'),
                     SizedBox(height: 8),
-                    _LegendItem(color: AppColors.warning, label: 'Sedang Berjalan', value: '50.00% (6 target)'),
+                    _LegendItem(color: AppColors.warning, label: 'Sedang Berjalan', value: '${stats.inProgressPercentLabel} (${stats.inProgressTargets} target)'),
                     SizedBox(height: 8),
-                    _LegendItem(color: AppColors.danger, label: 'Belum Dimulai', value: '8.33% (1 target)'),
+                    _LegendItem(color: AppColors.danger, label: 'Belum Dimulai', value: '${stats.notStartedPercentLabel} (${stats.notStartedTargets} target)'),
                   ],
                 ),
               ),
@@ -367,6 +370,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildProgresPerKategoriCard() {
+    final categories = bootstrap.report.categoryProgress;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -374,27 +378,19 @@ class LaporanScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text('Progres per Kategori', style: AppTextStyles.h3),
           SizedBox(height: 16),
-          CategoryProgressBar(dotColor: AppColors.primary, label: 'Pengembangan Diri', percent: 75, barColor: AppColors.primary),
-          CategoryProgressBar(dotColor: AppColors.secondary, label: 'Kesehatan', percent: 68, barColor: AppColors.secondary),
-          CategoryProgressBar(dotColor: AppColors.warning, label: 'Keuangan', percent: 55, barColor: AppColors.warning),
-          CategoryProgressBar(dotColor: AppColors.purple, label: 'Karier', percent: 40, barColor: AppColors.purple),
-          CategoryProgressBar(dotColor: AppColors.pink, label: 'Hubungan', percent: 30, barColor: AppColors.pink),
+          ...categories.map((item) => CategoryProgressBar(dotColor: item.color, label: item.name, percent: item.percent, barColor: item.color)),
         ],
       ),
     );
   }
 
   Widget _buildRingkasanPerKategoriCard() {
-    final list = [
-      {'name': 'Pengembangan Diri', 'val': '75%', 'target': '3/4 target'},
-      {'name': 'Kesehatan', 'val': '68%', 'target': '2/3 target'},
-      {'name': 'Keuangan', 'val': '55%', 'target': '2/3 target'},
-    ];
+    final list = bootstrap.report.categoryProgress.take(3).toList();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -414,13 +410,13 @@ class LaporanScreen extends StatelessWidget {
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(item['name']!, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                        Text(item.name, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                         const SizedBox(height: 2),
-                        Text(item['target']!, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
+                        Text(item.targetSummary, style: const TextStyle(fontSize: 11, color: AppColors.textSecondary)),
                       ],
                     ),
                     const Spacer(),
-                    Text(item['val']!, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
+                    Text('${item.percent}%', style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: AppColors.primary)),
                     const SizedBox(width: 8),
                     const Icon(Icons.chevron_right, size: 16, color: AppColors.textMuted),
                   ],
@@ -455,6 +451,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildAverageCard() {
+    final stats = bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -475,14 +472,14 @@ class LaporanScreen extends StatelessWidget {
                 color: AppColors.purple, size: 22),
           ),
           const SizedBox(width: 12),
-          const Column(
+          Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text('Rata-rata Penyelesaian', style: AppTextStyles.bodySmall),
               SizedBox(height: 2),
               Text(
-                '62%',
-                style: TextStyle(
+                '${stats.averageCompletion.toStringAsFixed(0)}%',
+                style: const TextStyle(
                     fontSize: 26,
                     fontWeight: FontWeight.w800,
                     color: AppColors.textPrimary),
@@ -654,6 +651,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildTargetList() {
+    final targets = bootstrap.report.targets;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -666,69 +664,28 @@ class LaporanScreen extends StatelessWidget {
         children: [
           const SectionHeader(title: 'Daftar Progres Target'),
           const SizedBox(height: 12),
-          _buildTargetRow(
-            icon: Icons.menu_book_rounded,
-            iconColor: AppColors.primary,
-            title: 'Membaca 12 Buku',
-            category: 'Pengembangan Diri',
-            categoryColor: AppColors.primary,
-            deadline: '31 Des 2024',
-            progress: 0.58,
-            status: 'Sedang Berjalan',
-            statusColor: AppColors.warning,
-          ),
-          const Divider(height: 20),
-          _buildTargetRow(
-            icon: Icons.fitness_center_rounded,
-            iconColor: AppColors.secondary,
-            title: 'Olahraga 4x Seminggu',
-            category: 'Kesehatan',
-            categoryColor: AppColors.secondary,
-            deadline: '30 Jun 2024',
-            progress: 0.75,
-            status: 'Sedang Berjalan',
-            statusColor: AppColors.warning,
-          ),
-          const Divider(height: 20),
-          _buildTargetRow(
-            icon: Icons.savings_rounded,
-            iconColor: AppColors.warning,
-            title: 'Menabung Rp10.000.000',
-            category: 'Keuangan',
-            categoryColor: AppColors.warning,
-            deadline: '31 Des 2024',
-            progress: 0.40,
-            status: 'Sedang Berjalan',
-            statusColor: AppColors.warning,
-          ),
-          const Divider(height: 20),
-          _buildTargetRow(
-            icon: Icons.laptop_rounded,
-            iconColor: AppColors.purple,
-            title: 'Belajar UI/UX Design',
-            category: 'Karier',
-            categoryColor: AppColors.purple,
-            deadline: '15 Okt 2024',
-            progress: 0.20,
-            status: 'Sedang Berjalan',
-            statusColor: AppColors.warning,
-          ),
-          const Divider(height: 20),
-          _buildTargetRow(
-            icon: Icons.flight_rounded,
-            iconColor: AppColors.danger,
-            title: 'Liburan ke Jepang',
-            category: 'Keuangan',
-            categoryColor: AppColors.warning,
-            deadline: '31 Des 2025',
-            progress: 0.10,
-            status: 'Belum Dimulai',
-            statusColor: AppColors.danger,
-          ),
+          ...targets.asMap().entries.expand((entry) {
+            final isLast = entry.key == targets.length - 1;
+            final target = entry.value;
+            return [
+              _buildTargetRow(
+                icon: target.icon,
+                iconColor: target.iconColor,
+                title: target.title,
+                category: target.category,
+                categoryColor: target.categoryColor,
+                deadline: target.deadline,
+                progress: target.progress,
+                status: target.status,
+                statusColor: target.statusColor,
+              ),
+              if (!isLast) const Divider(height: 20),
+            ];
+          }),
           const SizedBox(height: 12),
           Center(
             child: Text(
-              'Menampilkan 1 - 5 dari 12 target',
+              'Menampilkan 1 - ${targets.length} dari ${bootstrap.summary.totalTargets} target',
               style: AppTextStyles.caption,
             ),
           ),
@@ -811,6 +768,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildAchievement() {
+    final stats = bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -837,19 +795,19 @@ class LaporanScreen extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      '5 target berhasil diselesaikan!',
-                      style: TextStyle(
+                      '${stats.completedTargets} target berhasil diselesaikan!',
+                      style: const TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary),
                     ),
                     SizedBox(height: 3),
-                    Text('Pertahankan semangatmu!',
+                    const Text('Pertahankan semangatmu!',
                         style: AppTextStyles.bodySmall),
                   ],
                 ),
@@ -883,8 +841,8 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildTrenProgres() {
-    final months = ['Des', 'Jan', 'Feb', 'Mar', 'Apr', 'Mei'];
-    final values = [36, 40, 48, 55, 58, 62];
+    final months = bootstrap.report.trends.map((item) => item['label'] ?? '').toList();
+    final values = bootstrap.report.trends.map((item) => int.tryParse(item['value'] ?? '0') ?? 0).toList();
     final maxVal = values.reduce((a, b) => a > b ? a : b);
 
     return Container(

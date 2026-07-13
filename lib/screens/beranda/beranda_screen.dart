@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
+import '../../state/app_session.dart';
 import '../../widgets/common_widgets.dart';
 import '../auth/login_screen.dart';
 
 class BerandaScreen extends StatelessWidget {
+  final AppBootstrap bootstrap;
   final VoidCallback? onProfileTap;
-  const BerandaScreen({super.key, this.onProfileTap});
+  const BerandaScreen({super.key, required this.bootstrap, this.onProfileTap});
 
   @override
   Widget build(BuildContext context) {
@@ -143,6 +146,7 @@ class BerandaScreen extends StatelessWidget {
               if (value == 'profile') {
                 if (onProfileTap != null) onProfileTap!();
               } else if (value == 'logout') {
+                AppSession.instance.clear();
                 Navigator.of(context).pushReplacement(
                   MaterialPageRoute(builder: (_) => const LoginScreen()),
                 );
@@ -202,16 +206,16 @@ class BerandaScreen extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Text(
-                'Selamat Siang, ',
-                style: TextStyle(
+              Text(
+                '${bootstrap.dashboard.greeting}, ',
+                style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w400,
                     color: AppColors.textSecondary),
               ),
-              const Text(
-                'Andi! 👋',
-                style: TextStyle(
+              Text(
+                '${bootstrap.user.name.split(' ').first}! 👋',
+                style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
                     color: AppColors.textPrimary),
@@ -219,16 +223,14 @@ class BerandaScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 4),
-          const Text(
-            'Pantau perkembangan targetmu hari ini',
-            style: AppTextStyles.bodySmall,
-          ),
+          Text(bootstrap.dashboard.subtitle, style: AppTextStyles.bodySmall),
         ],
       ),
     );
   }
 
   Widget _buildStatsGrid(bool isDesktop) {
+    final stats = bootstrap.summary;
     return GridView.count(
       crossAxisCount: isDesktop ? 4 : 2,
       crossAxisSpacing: 12,
@@ -236,13 +238,13 @@ class BerandaScreen extends StatelessWidget {
       childAspectRatio: isDesktop ? 1.6 : 1.55,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      children: const [
+      children: [
         StatCard(
           iconBg: Color(0xFFDCFCE7),
           icon: Icons.track_changes_rounded,
           iconColor: AppColors.primary,
           title: 'Total Target',
-          value: '12',
+          value: '${stats.totalTargets}',
           subtitle: 'Semua target aktif',
         ),
         StatCard(
@@ -250,78 +252,61 @@ class BerandaScreen extends StatelessWidget {
           icon: Icons.check_circle_outline_rounded,
           iconColor: AppColors.secondary,
           title: 'Selesai',
-          value: '5',
-          subtitle: '41.67% dari total',
+          value: '${stats.completedTargets}',
+          subtitle: '${stats.completedPercentLabel} dari total',
         ),
         StatCard(
           iconBg: Color(0xFFFFFBEB),
           icon: Icons.timelapse_rounded,
           iconColor: AppColors.warning,
           title: 'Sedang Berjalan',
-          value: '6',
-          subtitle: '50.00% dari total',
+          value: '${stats.inProgressTargets}',
+          subtitle: '${stats.inProgressPercentLabel} dari total',
         ),
         StatCard(
           iconBg: Color(0xFFFFF1F2),
           icon: Icons.radio_button_unchecked_rounded,
           iconColor: AppColors.danger,
           title: 'Belum Dimulai',
-          value: '1',
-          subtitle: '8.33% dari total',
+          value: '${stats.notStartedTargets}',
+          subtitle: '${stats.notStartedPercentLabel} dari total',
         ),
       ],
     );
   }
 
   Widget _buildTodayTargets() {
+    final targets = bootstrap.dashboard.todayTargets;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Target Aktif Hari Ini'),
         const SizedBox(height: 12),
-        _TargetItem(
-          icon: Icons.menu_book_rounded,
-          iconBg: const Color(0xFFDCFCE7),
-          iconColor: AppColors.primary,
-          title: 'Membaca 12 Buku dalam Setahun',
-          category: 'Pengembangan Diri',
-          categoryColor: AppColors.primary,
-          progress: 0.58,
-          progressLabel: '58%',
-          status: 'Sedang Berjalan',
-          statusColor: AppColors.warning,
-        ),
-        const SizedBox(height: 10),
-        _TargetItem(
-          icon: Icons.fitness_center_rounded,
-          iconBg: const Color(0xFFEFF6FF),
-          iconColor: AppColors.secondary,
-          title: 'Olahraga 4x Seminggu',
-          category: 'Kesehatan',
-          categoryColor: AppColors.secondary,
-          progress: 0.75,
-          progressLabel: '75%',
-          status: 'Sedang Berjalan',
-          statusColor: AppColors.warning,
-        ),
-        const SizedBox(height: 10),
-        _TargetItem(
-          icon: Icons.savings_rounded,
-          iconBg: const Color(0xFFFFFBEB),
-          iconColor: AppColors.warning,
-          title: 'Menabung Rp10.000.000',
-          category: 'Keuangan',
-          categoryColor: AppColors.warning,
-          progress: 0.40,
-          progressLabel: '40%',
-          status: 'Sedang Berjalan',
-          statusColor: AppColors.warning,
-        ),
+        ...targets.asMap().entries.map((entry) {
+          final index = entry.key;
+          final target = entry.value;
+          return Padding(
+            padding: EdgeInsets.only(bottom: index < targets.length - 1 ? 10 : 0),
+            child: _TargetItem(
+              icon: target.icon,
+              iconBg: target.iconBg,
+              iconColor: target.iconColor,
+              title: target.title,
+              category: target.category,
+              categoryColor: target.categoryColor,
+              progress: target.progress,
+              progressLabel: target.progressLabel,
+              status: target.status,
+              statusColor: target.statusColor,
+            ),
+          );
+        }),
       ],
     );
   }
 
   Widget _buildMotivationCard() {
+    final motivation = bootstrap.dashboard.motivation;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -344,9 +329,9 @@ class BerandaScreen extends StatelessWidget {
                   color: Colors.white.withOpacity(0.2),
                   borderRadius: BorderRadius.circular(20),
                 ),
-                child: const Text(
-                  '💡 Motivasi Hari Ini',
-                  style: TextStyle(
+                child: Text(
+                  motivation.title,
+                  style: const TextStyle(
                       color: Colors.white,
                       fontSize: 11,
                       fontWeight: FontWeight.w600),
@@ -355,9 +340,9 @@ class BerandaScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          const Text(
-            '"Disiplin hari ini adalah keberhasilan masa depanmu."',
-            style: TextStyle(
+          Text(
+            '"${motivation.quote}"',
+            style: const TextStyle(
               color: Colors.white,
               fontSize: 15,
               fontWeight: FontWeight.w600,
@@ -365,9 +350,9 @@ class BerandaScreen extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 6),
-          const Text(
-            '– Target365',
-            style: TextStyle(
+          Text(
+            '– ${motivation.author}',
+            style: const TextStyle(
                 color: Colors.white70, fontSize: 12),
           ),
         ],

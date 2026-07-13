@@ -1,52 +1,26 @@
 import 'package:flutter/material.dart';
+import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
 class KategoriScreen extends StatelessWidget {
-  const KategoriScreen({super.key});
+  final AppBootstrap bootstrap;
 
-  static const List<_KategoriData> _categories = [
-    _KategoriData(
-      icon: Icons.eco_rounded,
-      iconBg: Color(0xFFDCFCE7),
-      iconColor: AppColors.primary,
-      name: 'Pengembangan Diri',
-      description: 'Kategori untuk target yang berfokus pada pengembangan diri dan kebiasaan positif.',
-      jumlahTarget: '7 target',
-    ),
-    _KategoriData(
-      icon: Icons.favorite_rounded,
-      iconBg: Color(0xFFFFF1F2),
-      iconColor: AppColors.danger,
-      name: 'Kesehatan',
-      description: 'Kategori untuk target yang berkaitan dengan kesehatan fisik dan mental.',
-      jumlahTarget: '5 target',
-    ),
-    _KategoriData(
-      icon: Icons.account_balance_wallet_rounded,
-      iconBg: Color(0xFFFFFBEB),
-      iconColor: AppColors.warning,
-      name: 'Keuangan',
-      description: 'Kategori untuk target yang berhubungan dengan pengelolaan dan perencanaan keuangan.',
-      jumlahTarget: '6 target',
-    ),
-    _KategoriData(
-      icon: Icons.work_rounded,
-      iconBg: Color(0xFFF5F3FF),
-      iconColor: AppColors.purple,
-      name: 'Karier',
-      description: 'Kategori untuk target yang mendukung pengembangan karier dan pekerjaan.',
-      jumlahTarget: '3 target',
-    ),
-    _KategoriData(
-      icon: Icons.people_rounded,
-      iconBg: Color(0xFFFFEDF5),
-      iconColor: AppColors.pink,
-      name: 'Hubungan',
-      description: 'Kategori untuk target yang berfokus pada hubungan sosial dan keluarga.',
-      jumlahTarget: '2 target',
-    ),
-  ];
+  const KategoriScreen({super.key, required this.bootstrap});
+
+  List<_KategoriData> get _categories => bootstrap.categories
+      .map(
+        (c) => _KategoriData(
+          icon: c.icon,
+          iconBg: c.iconBg,
+          iconColor: c.iconColor,
+          name: c.name,
+          description: c.description,
+          jumlahTarget: c.jumlahTarget,
+          status: c.status,
+        ),
+      )
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -104,13 +78,13 @@ class KategoriScreen extends StatelessWidget {
                 childAspectRatio: isDesktop ? 1.6 : 1.6,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                children: const [
+                children: [
                   StatCard(
                     iconBg: Color(0xFFDCFCE7),
                     icon: Icons.grid_view_rounded,
                     iconColor: AppColors.primary,
                     title: 'Total Kategori',
-                    value: '8',
+                    value: '${_categories.length}',
                     subtitle: 'Semua kategori aktif',
                   ),
                   StatCard(
@@ -118,7 +92,7 @@ class KategoriScreen extends StatelessWidget {
                     icon: Icons.folder_open_rounded,
                     iconColor: AppColors.secondary,
                     title: 'Kategori Modul',
-                    value: '8',
+                    value: '${_categories.length}',
                     subtitle: 'Kategori aktif',
                   ),
                   StatCard(
@@ -126,7 +100,7 @@ class KategoriScreen extends StatelessWidget {
                     icon: Icons.visibility_rounded,
                     iconColor: AppColors.warning,
                     title: 'Total Digunakan',
-                    value: '23',
+                    value: '${bootstrap.targets.length}',
                     subtitle: 'Target menggunakan',
                   ),
                   StatCard(
@@ -134,7 +108,7 @@ class KategoriScreen extends StatelessWidget {
                     icon: Icons.inventory_2_rounded,
                     iconColor: AppColors.purple,
                     title: 'Nonaktif',
-                    value: '0',
+                    value: '${_categories.where((item) => item.status != 'Aktif').length}',
                     subtitle: 'Kategori dinonaktifkan',
                   ),
                 ],
@@ -416,6 +390,7 @@ class _KategoriData {
   final String name;
   final String description;
   final String jumlahTarget;
+  final String status;
 
   const _KategoriData({
     required this.icon,
@@ -424,6 +399,7 @@ class _KategoriData {
     required this.name,
     required this.description,
     required this.jumlahTarget,
+    required this.status,
   });
 }
 

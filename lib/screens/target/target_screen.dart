@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
 class TargetScreen extends StatefulWidget {
-  const TargetScreen({super.key});
+  final AppBootstrap bootstrap;
+
+  const TargetScreen({super.key, required this.bootstrap});
 
   @override
   State<TargetScreen> createState() => _TargetScreenState();
@@ -85,82 +88,30 @@ class _TargetScreenState extends State<TargetScreen> {
   }
 
   List<Widget> _buildTargetList() {
-    return [
-      _buildTargetCard(
-        icon: Icons.menu_book_rounded,
-        iconBg: const Color(0xFFDCFCE7),
-        iconColor: AppColors.primary,
-        title: 'Membaca 12 Buku dalam Setahun',
-        category: 'Pengembangan Diri',
-        categoryColor: AppColors.primary,
-        priority: 'Tinggi',
-        deadline: '31 Des 2024',
-        progress: 0.58,
-        progressLabel: '58%',
-        status: 'Sedang Berjalan',
-        statusColor: AppColors.warning,
-      ),
-      if (!Uri.base.toString().contains('desktop')) const SizedBox(height: 12),
-      _buildTargetCard(
-        icon: Icons.fitness_center_rounded,
-        iconBg: const Color(0xFFEFF6FF),
-        iconColor: AppColors.secondary,
-        title: 'Olahraga 4x Seminggu',
-        category: 'Kesehatan',
-        categoryColor: AppColors.secondary,
-        priority: 'Tinggi',
-        deadline: '30 Jun 2024',
-        progress: 0.75,
-        progressLabel: '75%',
-        status: 'Sedang Berjalan',
-        statusColor: AppColors.warning,
-      ),
-      if (!Uri.base.toString().contains('desktop')) const SizedBox(height: 12),
-      _buildTargetCard(
-        icon: Icons.savings_rounded,
-        iconBg: const Color(0xFFFFFBEB),
-        iconColor: AppColors.warning,
-        title: 'Menabung Rp10.000.000',
-        category: 'Keuangan',
-        categoryColor: AppColors.warning,
-        priority: 'Sedang',
-        deadline: '31 Des 2024',
-        progress: 0.40,
-        progressLabel: '40%',
-        status: 'Sedang Berjalan',
-        statusColor: AppColors.warning,
-      ),
-      if (!Uri.base.toString().contains('desktop')) const SizedBox(height: 12),
-      _buildTargetCard(
-        icon: Icons.laptop_rounded,
-        iconBg: const Color(0xFFF5F3FF),
-        iconColor: AppColors.purple,
-        title: 'Belajar UI/UX Design',
-        category: 'Karier',
-        categoryColor: AppColors.purple,
-        priority: 'Sedang',
-        deadline: '15 Okt 2024',
-        progress: 0.20,
-        progressLabel: '20%',
-        status: 'Sedang Berjalan',
-        statusColor: AppColors.warning,
-      ),
-      if (!Uri.base.toString().contains('desktop')) const SizedBox(height: 12),
-      _buildTargetCard(
-        icon: Icons.flight_rounded,
-        iconBg: const Color(0xFFFFF1F2),
-        iconColor: AppColors.danger,
-        title: 'Liburan ke Jepang',
-        category: 'Keuangan',
-        categoryColor: AppColors.warning,
-        priority: 'Rendah',
-        deadline: '31 Des 2025',
-        progress: 0.10,
-        progressLabel: '10%',
-        status: 'Belum Dimulai',
-        statusColor: AppColors.danger,
-      ),
-    ];
+    final targets = widget.bootstrap.targets;
+    return targets
+        .asMap()
+        .entries
+        .map(
+          (entry) => Padding(
+            padding: EdgeInsets.only(bottom: entry.key < targets.length - 1 ? 12 : 0),
+            child: _buildTargetCard(
+              icon: entry.value.icon,
+              iconBg: entry.value.iconBg,
+              iconColor: entry.value.iconColor,
+              title: entry.value.title,
+              category: entry.value.category,
+              categoryColor: entry.value.categoryColor,
+              priority: entry.value.priority,
+              deadline: entry.value.deadline,
+              progress: entry.value.progress,
+              progressLabel: entry.value.progressLabel,
+              status: entry.value.status,
+              statusColor: entry.value.statusColor,
+            ),
+          ),
+        )
+        .toList();
   }
 
   Widget _buildFilterTabs() {

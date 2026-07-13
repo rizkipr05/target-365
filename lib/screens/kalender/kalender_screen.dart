@@ -1,39 +1,39 @@
 import 'package:flutter/material.dart';
+import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
 class KalenderScreen extends StatefulWidget {
-  const KalenderScreen({super.key});
+  final AppBootstrap bootstrap;
+
+  const KalenderScreen({super.key, required this.bootstrap});
 
   @override
   State<KalenderScreen> createState() => _KalenderScreenState();
 }
 
 class _KalenderScreenState extends State<KalenderScreen> {
-  int _selectedDay = 21;
-  int _currentMonth = 5; // May (1-indexed)
-  int _currentYear = 2025;
+  late int _selectedDay;
+  late int _currentMonth;
+  late int _currentYear;
 
-  final Map<int, List<_EventData>> _events = {
-    1: [_EventData('Olahraga 4x Seminggu', AppColors.primary)],
-    4: [_EventData('Motivasi Pagi', AppColors.warning)],
-    6: [_EventData('Belajar UI/UX Design', AppColors.secondary)],
-    9: [_EventData('Minum 2L Air', AppColors.pink)],
-    9: [_EventData('Membaca 12 Buku...', AppColors.primary)],
-    13: [_EventData('Menabung Rp10.000.000', AppColors.warning)],
-    14: [_EventData('Kerja Project Klien', AppColors.primary)],
-    16: [_EventData('Meditasi 10 Menit', AppColors.purple)],
-    18: [_EventData('Jangan lupa bersyukur', AppColors.warning)],
-    20: [_EventData('Review Materi Design', AppColors.secondary)],
-    21: [
-      _EventData('Olahraga 4x Seminggu', AppColors.primary),
-      _EventData('Journal Malam', AppColors.purple),
-    ],
-    23: [_EventData('Deadline Project UI', AppColors.danger)],
-    26: [_EventData('Update Portofolio', AppColors.secondary)],
-    28: [_EventData('Belajar Frontend Lanjutan', AppColors.primary)],
-    30: [_EventData('Evaluasi Bulanan', AppColors.primary)],
-  };
+  Map<int, List<_EventData>> get _events => widget.bootstrap.calendar.groupedEntries.map(
+        (day, entries) => MapEntry(
+          day,
+          entries
+              .map((entry) => _EventData(entry.title, entry.color, entry.time, entry.type))
+              .toList(),
+        ),
+      );
+
+  @override
+  void initState() {
+    super.initState();
+    final calendar = widget.bootstrap.calendar;
+    _selectedDay = calendar.selectedDay;
+    _currentMonth = calendar.currentMonth;
+    _currentYear = calendar.currentYear;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -368,7 +368,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          'Mei 2025',
+          widget.bootstrap.calendar.monthLabel,
           style: AppTextStyles.h2,
         ),
         Row(
@@ -538,6 +538,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
   }
 
   Widget _buildTodayEvents() {
+    final events = widget.bootstrap.calendar.entriesForDay(_selectedDay);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -557,22 +558,29 @@ class _KalenderScreenState extends State<KalenderScreen> {
                   color: AppColors.primary,
                   shape: BoxShape.circle,
                 ),
-                child: const Center(
-                  child: Text('21',
-                      style: TextStyle(
+                child: Center(
+                  child: Text('$_selectedDay',
+                      style: const TextStyle(
                           color: Colors.white,
                           fontSize: 12,
                           fontWeight: FontWeight.w700)),
                 ),
               ),
               const SizedBox(width: 10),
-              const Text('Rabu, 21 Mei 2025', style: AppTextStyles.h3),
+              Text('$_selectedDay ${widget.bootstrap.calendar.monthLabel}',
+                  style: AppTextStyles.h3),
             ],
           ),
           const SizedBox(height: 12),
-          _buildEventItem(AppColors.primary, 'Olahraga 4x Seminggu', '06:00 - 07:00'),
-          const SizedBox(height: 8),
-          _buildEventItem(AppColors.purple, 'Journal Malam', '21:00 - 21:30'),
+          if (events.isEmpty)
+            const Text('Tidak ada kegiatan pada hari ini', style: AppTextStyles.bodySmall)
+          else
+            ...events.asMap().entries.map((entry) {
+              return Padding(
+                padding: EdgeInsets.only(bottom: entry.key < events.length - 1 ? 8 : 0),
+                child: _buildEventItem(entry.value.color, entry.value.title, entry.value.time),
+              );
+            }),
           const SizedBox(height: 12),
           GestureDetector(
             onTap: () {},
@@ -625,6 +633,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
   }
 
   Widget _buildMonthSummary() {
+    final summary = widget.bootstrap.calendar.summary;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -637,10 +646,10 @@ class _KalenderScreenState extends State<KalenderScreen> {
         children: [
           const Text('Ringkasan Bulan Ini', style: AppTextStyles.h3),
           const SizedBox(height: 12),
-          _summaryRow(AppColors.primary, Icons.track_changes_rounded, 'Total Target', '12'),
-          _summaryRow(AppColors.secondary, Icons.check_circle_outline_rounded, 'Selesai', '5'),
-          _summaryRow(AppColors.warning, Icons.timelapse_rounded, 'Sedang Berjalan', '6'),
-          _summaryRow(AppColors.danger, Icons.radio_button_unchecked_rounded, 'Belum Dimulai', '1'),
+          _summaryRow(AppColors.primary, Icons.track_changes_rounded, 'Total Target', '${summary.totalTargets}'),
+          _summaryRow(AppColors.secondary, Icons.check_circle_outline_rounded, 'Selesai', '${summary.completedTargets}'),
+          _summaryRow(AppColors.warning, Icons.timelapse_rounded, 'Sedang Berjalan', '${summary.inProgressTargets}'),
+          _summaryRow(AppColors.danger, Icons.radio_button_unchecked_rounded, 'Belum Dimulai', '${summary.notStartedTargets}'),
         ],
       ),
     );
@@ -662,6 +671,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
   }
 
   Widget _buildDeadlines() {
+    final deadlines = widget.bootstrap.calendar.deadlines;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -674,11 +684,13 @@ class _KalenderScreenState extends State<KalenderScreen> {
         children: [
           const Text('Deadline Terdekat', style: AppTextStyles.h3),
           const SizedBox(height: 12),
-          _deadlineRow(AppColors.danger, 'Deadline Project UI', '23 Mei 2025', '2 hari lagi'),
-          const Divider(height: 16),
-          _deadlineRow(AppColors.warning, 'Laporan Bulanan', '30 Mei 2025', '9 hari lagi'),
-          const Divider(height: 16),
-          _deadlineRow(AppColors.purple, 'Evaluasi Q2', '15 Jun 2025', '25 hari lagi'),
+          ...deadlines.asMap().entries.expand((entry) {
+            final isLast = entry.key == deadlines.length - 1;
+            return [
+              _deadlineRow(entry.value.color, entry.value.title, entry.value.date, entry.value.remaining),
+              if (!isLast) const Divider(height: 16),
+            ];
+          }),
           const SizedBox(height: 12),
           GestureDetector(
             onTap: () {},
@@ -807,7 +819,10 @@ class _KalenderScreenState extends State<KalenderScreen> {
 class _EventData {
   final String title;
   final Color color;
-  const _EventData(this.title, this.color);
+  final String time;
+  final String type;
+
+  const _EventData(this.title, this.color, this.time, this.type);
 }
 
 class _LegendaItem {

@@ -1,9 +1,14 @@
 import 'package:flutter/material.dart';
+import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
+import '../../state/app_session.dart';
+import '../auth/login_screen.dart';
 
 class ProfilScreen extends StatefulWidget {
-  const ProfilScreen({super.key});
+  final AppBootstrap bootstrap;
+
+  const ProfilScreen({super.key, required this.bootstrap});
 
   @override
   State<ProfilScreen> createState() => _ProfilScreenState();
@@ -37,6 +42,23 @@ class _ProfilScreenState extends State<ProfilScreen> {
     {'name': 'Notifikasi', 'icon': Icons.notifications_none_rounded},
     {'name': 'Aktivitas Saya', 'icon': Icons.history_rounded},
   ];
+
+  @override
+  void initState() {
+    super.initState();
+    final profile = widget.bootstrap.profile;
+    _twoFactor = profile.twoFactor;
+    _darkMode = profile.darkMode;
+    _compactView = profile.compactView;
+    _language = profile.language;
+    _dateFormat = profile.dateFormat;
+    _notifPush = profile.notifPush;
+    _notifEmail = profile.notifEmail;
+    _notifTargetReminder = profile.notifTargetReminder;
+    _notifAchievement = profile.notifAchievement;
+    _notifWeekly = profile.notifWeekly;
+    _notifMotivasi = profile.notifMotivasi;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -145,7 +167,12 @@ class _ProfilScreenState extends State<ProfilScreen> {
           }),
           const Divider(height: 24, color: AppColors.border),
           InkWell(
-            onTap: () {},
+            onTap: () {
+              AppSession.instance.clear();
+              Navigator.of(context).pushReplacement(
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
@@ -229,6 +256,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildPengaturanAkun(bool isDesktop) {
+    final profile = widget.bootstrap.profile;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -237,13 +265,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
           subtitle: 'Perbarui informasi dasar akun Anda',
           icon: Icons.manage_accounts_outlined,
           children: [
-            _buildEditableField('Nama Lengkap', 'Andi Pratama', Icons.person_outline_rounded),
+            _buildEditableField('Nama Lengkap', profile.name, Icons.person_outline_rounded),
             const Divider(color: AppColors.border, height: 1),
-            _buildEditableField('Username', 'andipratama', Icons.alternate_email_rounded),
+            _buildEditableField('Username', profile.username, Icons.alternate_email_rounded),
             const Divider(color: AppColors.border, height: 1),
-            _buildEditableField('Email', 'andi.pratama@email.com', Icons.mail_outline_rounded),
+            _buildEditableField('Email', profile.email, Icons.mail_outline_rounded),
             const Divider(color: AppColors.border, height: 1),
-            _buildEditableField('No. Telepon', '+62 812-3456-7890', Icons.phone_outlined),
+            _buildEditableField('No. Telepon', profile.phone, Icons.phone_outlined),
           ],
         ),
         const SizedBox(height: 16),
@@ -320,6 +348,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildKeamanan(bool isDesktop) {
+    final profile = widget.bootstrap.profile;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -407,15 +436,17 @@ class _ProfilScreenState extends State<ProfilScreen> {
           ],
         ),
         const SizedBox(height: 16),
-        _buildSectionCard(
+          _buildSectionCard(
           title: 'Sesi Aktif',
           subtitle: 'Perangkat yang sedang mengakses akun Anda',
           icon: Icons.devices_rounded,
           children: [
-            _buildSessionTile(Icons.smartphone_rounded, 'Android — Samsung Galaxy S23', 'Jakarta, Indonesia', true),
-            const Divider(color: AppColors.border, height: 1),
-            _buildSessionTile(Icons.computer_rounded, 'Chrome — Windows 11', 'Jakarta, Indonesia', false),
-            const Divider(color: AppColors.border, height: 1),
+            ...profile.sessions.map((session) => Column(
+                  children: [
+                    _buildSessionTile(session.icon, session.title, session.location, session.currentDevice),
+                    if (session != profile.sessions.last) const Divider(color: AppColors.border, height: 1),
+                  ],
+                )),
             Padding(
               padding: const EdgeInsets.all(12),
               child: TextButton.icon(
@@ -549,7 +580,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(8), color: AppColors.surface),
-                          child: const Text('22:00', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          child: Text(widget.bootstrap.profile.dndStart, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -566,7 +597,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(8), color: AppColors.surface),
-                          child: const Text('06:00', style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          child: Text(widget.bootstrap.profile.dndEnd, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -581,16 +612,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildAktivitasSaya(bool isDesktop) {
-    final activities = [
-      {'icon': Icons.check_rounded, 'color': AppColors.primary, 'bg': const Color(0xFFDCFCE7), 'title': 'Menyelesaikan target', 'desc': '"Olahraga 4x Seminggu"', 'time': 'Hari ini, 07:30'},
-      {'icon': Icons.edit_rounded, 'color': AppColors.secondary, 'bg': const Color(0xFFEFF6FF), 'title': 'Mengupdate progress', 'desc': '"Belajar UI/UX Design" — 65%', 'time': 'Kemarin, 21:15'},
-      {'icon': Icons.add_rounded, 'color': AppColors.warning, 'bg': const Color(0xFFFFFBEB), 'title': 'Menambahkan target baru', 'desc': '"Meditasi 10 Menit Setiap Hari"', 'time': '15 Mei 2025, 06:45'},
-      {'icon': Icons.emoji_emotions_outlined, 'color': AppColors.purple, 'bg': const Color(0xFFF5F3FF), 'title': 'Membaca motivasi harian', 'desc': '"Disiplin adalah kunci sukses"', 'time': '15 Mei 2025, 06:30'},
-      {'icon': Icons.emoji_events_outlined, 'color': AppColors.warning, 'bg': const Color(0xFFFEF3C7), 'title': 'Mencapai pencapaian baru', 'desc': 'Badge "Rajin Berdisiplin — 7 Hari Berturut"', 'time': '14 Mei 2025, 20:00'},
-      {'icon': Icons.check_rounded, 'color': AppColors.primary, 'bg': const Color(0xFFDCFCE7), 'title': 'Menyelesaikan target', 'desc': '"Menabung Rp10.000.000"', 'time': '13 Mei 2025, 18:30'},
-      {'icon': Icons.edit_rounded, 'color': AppColors.secondary, 'bg': const Color(0xFFEFF6FF), 'title': 'Mengupdate profil saya', 'desc': 'Mengubah bio dan foto profil', 'time': '12 Mei 2025, 10:00'},
-      {'icon': Icons.add_rounded, 'color': AppColors.warning, 'bg': const Color(0xFFFFFBEB), 'title': 'Menambahkan target baru', 'desc': '"Membaca 12 Buku dalam Setahun"', 'time': '10 Mei 2025, 08:15'},
-    ];
+    final activities = widget.bootstrap.profile.activities;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -602,7 +624,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             Container(
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
               decoration: BoxDecoration(color: AppColors.primaryLight, borderRadius: BorderRadius.circular(20)),
-              child: const Text('${8} aktivitas', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primaryDark)),
+              child: Text('${activities.length} aktivitas', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primaryDark)),
             ),
           ],
         ),
@@ -622,21 +644,21 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       children: [
                         Container(
                           width: 36, height: 36,
-                          decoration: BoxDecoration(color: act['bg'] as Color, borderRadius: BorderRadius.circular(8)),
-                          child: Icon(act['icon'] as IconData, size: 18, color: act['color'] as Color),
+                          decoration: BoxDecoration(color: act.backgroundColor, borderRadius: BorderRadius.circular(8)),
+                          child: Icon(act.icon, size: 18, color: act.color),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(act['title'] as String, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
+                              Text(act.title, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                               const SizedBox(height: 2),
-                              Text(act['desc'] as String, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
+                              Text(act.description, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
                             ],
                           ),
                         ),
-                        Text(act['time'] as String, style: AppTextStyles.caption),
+                        Text(act.time, style: AppTextStyles.caption),
                       ],
                     ),
                   ),
@@ -869,6 +891,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildProfileHeroCard(bool isDesktop) {
+    final profile = widget.bootstrap.profile;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -887,10 +910,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   Container(
                     width: isDesktop ? 90 : 70,
                     height: isDesktop ? 90 : 70,
-                    decoration: const BoxDecoration(
+                    decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       image: DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
+                        image: NetworkImage(profile.avatarUrl),
                         fit: BoxFit.cover,
                       ),
                     ),
@@ -922,9 +945,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   children: [
                     Row(
                       children: [
-                        const Text(
-                          'Andi Pratama',
-                          style: TextStyle(
+                        Text(
+                          profile.name,
+                          style: const TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
                             color: AppColors.textPrimary,
@@ -937,9 +960,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
                             color: AppColors.primaryLight,
                             borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            'Pengguna',
-                            style: TextStyle(
+                          child: Text(
+                            profile.role,
+                            style: const TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: AppColors.primaryDark,
@@ -953,7 +976,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       children: [
                         const Icon(Icons.email_outlined, size: 14, color: AppColors.textSecondary),
                         const SizedBox(width: 6),
-                        const Text('andi.pratama@email.com', style: AppTextStyles.bodySmall),
+                        Text(profile.email, style: AppTextStyles.bodySmall),
                       ],
                     ),
                     const SizedBox(height: 4),
@@ -961,13 +984,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       children: [
                         const Icon(Icons.calendar_today_outlined, size: 14, color: AppColors.textSecondary),
                         const SizedBox(width: 6),
-                        const Text('Bergabung sejak 12 Januari 2024', style: AppTextStyles.bodySmall),
+                        Text('Bergabung sejak ${profile.joinDate}', style: AppTextStyles.bodySmall),
                       ],
                     ),
                     const SizedBox(height: 8),
-                    const Text(
-                      '“Disiplin hari ini, adalah keberhasilan esok hari.”',
-                      style: TextStyle(
+                    Text(
+                      '“${profile.tagline}”',
+                      style: const TextStyle(
                         fontSize: 12,
                         fontStyle: FontStyle.italic,
                         color: AppColors.textSecondary,
@@ -994,36 +1017,37 @@ class _ProfilScreenState extends State<ProfilScreen> {
           // Stats Row
           LayoutBuilder(
             builder: (context, c) {
+              final summary = profile.summary;
               return Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   _buildMiniStatItem(
                     color: AppColors.primary,
                     icon: Icons.track_changes_rounded,
-                    value: '12',
+                    value: '${summary.totalTargets}',
                     label: 'Total Target',
                     subtitle: 'Semua target aktif',
                   ),
                   _buildMiniStatItem(
                     color: AppColors.secondary,
                     icon: Icons.check_circle_outline_rounded,
-                    value: '5',
+                    value: '${summary.completedTargets}',
                     label: 'Target Selesai',
-                    subtitle: '41.67% dari total',
+                    subtitle: '${summary.completedPercentLabel} dari total',
                   ),
                   _buildMiniStatItem(
                     color: AppColors.warning,
                     icon: Icons.timelapse_rounded,
-                    value: '6',
+                    value: '${summary.inProgressTargets}',
                     label: 'Sedang Berjalan',
-                    subtitle: '50.00% dari total',
+                    subtitle: '${summary.inProgressPercentLabel} dari total',
                   ),
                   _buildMiniStatItem(
                     color: AppColors.danger,
                     icon: Icons.radio_button_unchecked_rounded,
-                    value: '1',
+                    value: '${summary.notStartedTargets}',
                     label: 'Belum Dimulai',
-                    subtitle: '8.33% dari total',
+                    subtitle: '${summary.notStartedPercentLabel} dari total',
                   ),
                 ],
               );
@@ -1065,6 +1089,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildPersonalInformation() {
+    final profile = widget.bootstrap.profile;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1077,13 +1102,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
         children: [
           const Text('Informasi Pribadi', style: AppTextStyles.h3),
           const SizedBox(height: 16),
-          _buildInfoRow(Icons.person_outline_rounded, 'Nama Lengkap', 'Andi Pratama'),
-          _buildInfoRow(Icons.alternate_email_rounded, 'Username', 'andipratama'),
-          _buildInfoRow(Icons.mail_outline_rounded, 'Email', 'andi.pratama@email.com'),
-          _buildInfoRow(Icons.cake_outlined, 'Tanggal Lahir', '15 Mei 1998'),
-          _buildInfoRow(Icons.wc_rounded, 'Jenis Kelamin', 'Laki-laki'),
-          _buildInfoRow(Icons.phone_outlined, 'No. Telepon', '+62 812-3456-7890'),
-          _buildInfoRow(Icons.location_on_outlined, 'Lokasi', 'Jakarta, Indonesia'),
+          _buildInfoRow(Icons.person_outline_rounded, 'Nama Lengkap', profile.name),
+          _buildInfoRow(Icons.alternate_email_rounded, 'Username', profile.username),
+          _buildInfoRow(Icons.mail_outline_rounded, 'Email', profile.email),
+          _buildInfoRow(Icons.cake_outlined, 'Tanggal Lahir', profile.birthday),
+          _buildInfoRow(Icons.wc_rounded, 'Jenis Kelamin', profile.gender),
+          _buildInfoRow(Icons.phone_outlined, 'No. Telepon', profile.phone),
+          _buildInfoRow(Icons.location_on_outlined, 'Lokasi', profile.location),
         ],
       ),
     );
@@ -1111,6 +1136,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildAboutMeCard() {
+    final profile = widget.bootstrap.profile;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1132,9 +1158,9 @@ class _ProfilScreenState extends State<ProfilScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
-            'Saya adalah seseorang yang sedang belajar menjadi versi terbaik dari diri sendiri setiap hari.',
-            style: TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
+          Text(
+            profile.about,
+            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary, height: 1.4),
           ),
         ],
       ),
@@ -1142,32 +1168,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildRecentAchievements() {
-    final achievements = [
-      {
-        'title': 'Mencapai 90% target "Membaca 12 Buku dalam Setahun"',
-        'subtitle': 'Terus pertahankan konsistensimu!',
-        'date': '20 Mei 2025',
-        'icon': Icons.check_circle_outline_rounded,
-        'color': AppColors.primary,
-        'bg': const Color(0xFFDCFCE7),
-      },
-      {
-        'title': 'Berhasil menyelesaikan target "Menabung Rp10.000.000"',
-        'subtitle': 'Pencapaian luar biasa!',
-        'date': '18 Mei 2025',
-        'icon': Icons.emoji_events_outlined,
-        'color': AppColors.warning,
-        'bg': const Color(0xFFFEF3C7),
-      },
-      {
-        'title': 'Streak 7 hari berturut-turut',
-        'subtitle': 'Konsistensi adalah kunci keberhasilan!',
-        'date': '17 Mei 2025',
-        'icon': Icons.bolt_rounded,
-        'color': AppColors.purple,
-        'bg': const Color(0xFFF3E8FF),
-      },
-    ];
+    final achievements = widget.bootstrap.profile.achievements;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1196,24 +1197,24 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       width: 32,
                       height: 32,
                       decoration: BoxDecoration(
-                        color: a['bg'] as Color,
+                        color: a.backgroundColor,
                         shape: BoxShape.circle,
                       ),
-                      child: Icon(a['icon'] as IconData, size: 16, color: a['color'] as Color),
+                      child: Icon(a.icon, size: 16, color: a.color),
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(a['title'] as String, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
+                          Text(a.title, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: AppColors.textPrimary)),
                           const SizedBox(height: 2),
-                          Text(a['subtitle'] as String, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
+                          Text(a.subtitle, style: const TextStyle(fontSize: 10, color: AppColors.textSecondary)),
                         ],
                       ),
                     ),
                     const SizedBox(width: 8),
-                    Text(a['date'] as String, style: AppTextStyles.caption),
+                    Text(a.date, style: AppTextStyles.caption),
                   ],
                 ),
               )),
@@ -1223,40 +1224,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildRecentActivities(bool isDesktop) {
-    final activities = [
-      {
-        'title': 'Menyelesaikan target',
-        'target': '"Olahraga 4x Seminggu"',
-        'time': 'Hari ini, 07:30',
-        'color': AppColors.primary,
-        'bg': const Color(0xFFDCFCE7),
-        'icon': Icons.check_rounded,
-      },
-      {
-        'title': 'Mengupdate target',
-        'target': '"Belajar UI/UX Design"',
-        'time': 'Kemarin, 21:15',
-        'color': AppColors.secondary,
-        'bg': const Color(0xFFEFF6FF),
-        'icon': Icons.edit_rounded,
-      },
-      {
-        'title': 'Menambahkan target baru',
-        'target': '"Meditasi 10 Menit"',
-        'time': '15 Mei 2025, 06:45',
-        'color': AppColors.warning,
-        'bg': const Color(0xFFFFFBEB),
-        'icon': Icons.add_rounded,
-      },
-      {
-        'title': 'Membaca motivasi harian',
-        'target': '',
-        'time': '15 Mei 2025, 06:30',
-        'color': AppColors.purple,
-        'bg': const Color(0xFFF5F3FF),
-        'icon': Icons.emoji_emotions_outlined,
-      },
-    ];
+    final activities = widget.bootstrap.profile.activities;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -1291,10 +1259,10 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       width: 28,
                       height: 28,
                       decoration: BoxDecoration(
-                        color: act['bg'] as Color,
+                        color: act.backgroundColor,
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Icon(act['icon'] as IconData, size: 14, color: act['color'] as Color),
+                      child: Icon(act.icon, size: 14, color: act.color),
                     ),
                     const SizedBox(width: 10),
                     Expanded(
@@ -1303,13 +1271,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            '${act['title']} ${act['target']}',
+                            act.title,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.textPrimary),
                           ),
                           const SizedBox(height: 4),
-                          Text(act['time'] as String, style: AppTextStyles.caption),
+                          Text(act.time, style: AppTextStyles.caption),
                         ],
                       ),
                     ),

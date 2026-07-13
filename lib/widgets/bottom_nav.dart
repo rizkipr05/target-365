@@ -1,5 +1,9 @@
 import 'package:flutter/material.dart';
+import 'common_widgets.dart';
 import '../theme/app_theme.dart';
+import '../models/app_models.dart';
+import '../services/app_api.dart';
+import '../state/app_session.dart';
 import '../screens/beranda/beranda_screen.dart';
 import '../screens/target/target_screen.dart';
 import '../screens/kategori/kategori_screen.dart';
@@ -18,21 +22,21 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
-
-  late final List<Widget> _screens;
+  late Future<AppBootstrap> _bootstrapFuture;
 
   @override
   void initState() {
     super.initState();
-    _screens = [
-      BerandaScreen(onProfileTap: () => setState(() => _currentIndex = 6)),
-      const TargetScreen(),
-      const KategoriScreen(),
-      const MotivasiScreen(),
-      const LaporanScreen(),
-      const KalenderScreen(),
-      const ProfilScreen(),
-    ];
+    _bootstrapFuture = _loadBootstrap();
+  }
+
+  Future<AppBootstrap> _loadBootstrap() {
+    final session = AppSession.instance;
+    if (!session.isLoggedIn || session.user == null) {
+      throw StateError('Sesi login tidak ditemukan');
+    }
+
+    return AppApi.instance.bootstrap(session.user!.id);
   }
 
   final List<_NavItem> _navItems = const [
@@ -49,91 +53,148 @@ class _MainNavigationState extends State<MainNavigation> {
     return LayoutBuilder(
       builder: (context, constraints) {
         final isDesktop = constraints.maxWidth >= 960;
-        return Scaffold(
-          body: Column(
-            children: [
-              if (isDesktop) _buildDesktopHeader(),
-              Expanded(
-                child: Center(
-                  child: Container(
-                    constraints: BoxConstraints(
-                      maxWidth: isDesktop ? 1200 : double.infinity,
-                    ),
-                    child: IndexedStack(
-                      index: _currentIndex,
-                      children: _screens,
+        return FutureBuilder<AppBootstrap>(
+          future: _bootstrapFuture,
+          builder: (context, snapshot) {
+            if (snapshot.hasError) {
+              return Scaffold(
+                body: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.error_outline, size: 44, color: AppColors.danger),
+                        const SizedBox(height: 12),
+                        Text(
+                          'Gagal memuat data backend',
+                          style: AppTextStyles.h2,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          snapshot.error.toString(),
+                          style: AppTextStyles.bodySmall,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        PrimaryButton(
+                          label: 'Coba Lagi',
+                          icon: Icons.refresh_rounded,
+                          onTap: () => setState(() {
+                            _bootstrapFuture = _loadBootstrap();
+                          }),
+                        ),
+                      ],
                     ),
                   ),
                 ),
+              );
+            }
+
+            if (!snapshot.hasData) {
+              return const Scaffold(
+                body: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              );
+            }
+
+            final bootstrap = snapshot.data!;
+            final screens = [
+              BerandaScreen(
+                bootstrap: bootstrap,
+                onProfileTap: () => setState(() => _currentIndex = 6),
               ),
-            ],
-          ),
-          bottomNavigationBar: isDesktop
-              ? null
-              : Container(
-                  decoration: const BoxDecoration(
-                    color: AppColors.cardBg,
-                    border: Border(top: BorderSide(color: AppColors.border, width: 1)),
-                  ),
-                  child: SafeArea(
-                    child: SizedBox(
-                      height: 62,
-                      child: Row(
-                        children: List.generate(_navItems.length, (index) {
-                          final item = _navItems[index];
-                          final isActive = _currentIndex == index;
-                          return Expanded(
-                            child: GestureDetector(
-                              onTap: () => setState(() => _currentIndex = index),
-                              behavior: HitTestBehavior.opaque,
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  Icon(
-                                    item.icon,
-                                    size: 22,
-                                    color: isActive
-                                        ? AppColors.primary
-                                        : AppColors.textMuted,
-                                  ),
-                                  const SizedBox(height: 3),
-                                  Text(
-                                    item.label,
-                                    style: TextStyle(
-                                      fontSize: 9.5,
-                                      fontWeight: isActive
-                                          ? FontWeight.w700
-                                          : FontWeight.w400,
-                                      color: isActive
-                                          ? AppColors.primary
-                                          : AppColors.textMuted,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    width: isActive ? 18 : 0,
-                                    height: 3,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary,
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          );
-                        }),
+              TargetScreen(bootstrap: bootstrap),
+              KategoriScreen(bootstrap: bootstrap),
+              MotivasiScreen(bootstrap: bootstrap),
+              LaporanScreen(bootstrap: bootstrap),
+              KalenderScreen(bootstrap: bootstrap),
+              ProfilScreen(bootstrap: bootstrap),
+            ];
+
+            return Scaffold(
+              body: Column(
+                children: [
+                  if (isDesktop) _buildDesktopHeader(bootstrap),
+                  Expanded(
+                    child: Center(
+                      child: Container(
+                        constraints: BoxConstraints(
+                          maxWidth: isDesktop ? 1200 : double.infinity,
+                        ),
+                        child: IndexedStack(
+                          index: _currentIndex,
+                          children: screens,
+                        ),
                       ),
                     ),
                   ),
-                ),
+                ],
+              ),
+              bottomNavigationBar: isDesktop
+                  ? null
+                  : Container(
+                      decoration: const BoxDecoration(
+                        color: AppColors.cardBg,
+                        border: Border(top: BorderSide(color: AppColors.border, width: 1)),
+                      ),
+                      child: SafeArea(
+                        child: SizedBox(
+                          height: 62,
+                          child: Row(
+                            children: List.generate(_navItems.length, (index) {
+                              final item = _navItems[index];
+                              final isActive = _currentIndex == index;
+                              return Expanded(
+                                child: GestureDetector(
+                                  onTap: () => setState(() => _currentIndex = index),
+                                  behavior: HitTestBehavior.opaque,
+                                  child: Column(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        item.icon,
+                                        size: 22,
+                                        color: isActive ? AppColors.primary : AppColors.textMuted,
+                                      ),
+                                      const SizedBox(height: 3),
+                                      Text(
+                                        item.label,
+                                        style: TextStyle(
+                                          fontSize: 9.5,
+                                          fontWeight: isActive ? FontWeight.w700 : FontWeight.w400,
+                                          color: isActive ? AppColors.primary : AppColors.textMuted,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      AnimatedContainer(
+                                        duration: const Duration(milliseconds: 200),
+                                        width: isActive ? 18 : 0,
+                                        height: 3,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.primary,
+                                          borderRadius: BorderRadius.circular(2),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            }),
+                          ),
+                        ),
+                      ),
+                    ),
+            );
+          },
         );
       },
     );
   }
 
-  Widget _buildDesktopHeader() {
+  Widget _buildDesktopHeader(AppBootstrap bootstrap) {
     return Container(
       decoration: const BoxDecoration(
         color: AppColors.cardBg,
@@ -245,6 +306,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   if (value == 'profile') {
                     setState(() => _currentIndex = 6);
                   } else if (value == 'logout') {
+                    AppSession.instance.clear();
                     Navigator.of(context).pushReplacement(
                       MaterialPageRoute(builder: (_) => const LoginScreen()),
                     );
@@ -283,10 +345,10 @@ class _MainNavigationState extends State<MainNavigation> {
                           color: AppColors.primaryLight,
                           shape: BoxShape.circle,
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Text(
-                            'AP',
-                            style: TextStyle(
+                            bootstrap.user.initials,
+                            style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w700,
                               color: AppColors.primaryDark,
@@ -295,21 +357,21 @@ class _MainNavigationState extends State<MainNavigation> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Column(
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Text(
-                            'Andi Pratama',
-                            style: TextStyle(
+                            bootstrap.user.name,
+                            style: const TextStyle(
                               fontSize: 13,
                               fontWeight: FontWeight.w600,
                               color: AppColors.textPrimary,
                             ),
                           ),
                           Text(
-                            'Pengguna',
-                            style: TextStyle(
+                            bootstrap.user.role,
+                            style: const TextStyle(
                               fontSize: 11,
                               color: AppColors.textSecondary,
                             ),

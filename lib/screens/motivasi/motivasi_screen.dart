@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../models/app_models.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
 class MotivasiScreen extends StatefulWidget {
-  const MotivasiScreen({super.key});
+  final AppBootstrap bootstrap;
+
+  const MotivasiScreen({super.key, required this.bootstrap});
 
   @override
   State<MotivasiScreen> createState() => _MotivasiScreenState();
@@ -15,50 +18,17 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
     'Semua', 'Inspirasi', 'Produktivitas', 'Kehidupan', 'Kebiasaan', 'Mindset'
   ];
 
-  final List<_QuoteData> _quotes = const [
-    _QuoteData(
-      category: 'Inspirasi',
-      categoryColor: AppColors.secondary,
-      text: '"Jangan menunggu waktu yang tepat, karena waktu tidak akan pernah tepat. Mulailah sekarang."',
-      date: '24 Mei 2025',
-      liked: false,
-    ),
-    _QuoteData(
-      category: 'Produktivitas',
-      categoryColor: AppColors.purple,
-      text: '"Fokus pada progres, bukan pada kesempurnaan. Sedikit setiap hari, hasilnya luar biasa."',
-      date: '23 Mei 2025',
-      liked: true,
-    ),
-    _QuoteData(
-      category: 'Mindset',
-      categoryColor: AppColors.pink,
-      text: '"Pikiran positif akan membawa kamu ke tempat yang tidak bisa dicapai oleh pikiran negatif."',
-      date: '22 Mei 2025',
-      liked: false,
-    ),
-    _QuoteData(
-      category: 'Kehidupan',
-      categoryColor: AppColors.warning,
-      text: '"Hidup bukan tentang menunggu badai berlalu, tapi belajar menari di tengah hujan."',
-      date: '21 Mei 2025',
-      liked: false,
-    ),
-    _QuoteData(
-      category: 'Kebiasaan',
-      categoryColor: AppColors.primary,
-      text: '"Kebiasaan kecil yang konsisten akan menghasilkan perubahan besar dalam hidupmu."',
-      date: '20 Mei 2025',
-      liked: true,
-    ),
-    _QuoteData(
-      category: 'Inspirasi',
-      categoryColor: AppColors.secondary,
-      text: '"Percayalah pada dirimu sendiri dan semua hal akan mungkin terjadi."',
-      date: '19 Mei 2025',
-      liked: false,
-    ),
-  ];
+  List<_QuoteData> get _quotes => widget.bootstrap.quotes
+      .map(
+        (q) => _QuoteData(
+          category: q.category,
+          categoryColor: q.categoryColor,
+          text: q.text,
+          date: q.date,
+          liked: q.liked,
+        ),
+      )
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -167,13 +137,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
   }
 
   Widget _buildCategoryListCard() {
+    final grouped = <String, int>{};
+    for (final quote in widget.bootstrap.quotes) {
+      grouped[quote.category] = (grouped[quote.category] ?? 0) + 1;
+    }
     final categories = [
-      {'name': 'Semua Motivasi', 'count': 24},
-      {'name': 'Inspirasi', 'count': 6},
-      {'name': 'Produktivitas', 'count': 5},
-      {'name': 'Kehidupan', 'count': 4},
-      {'name': 'Kebiasaan', 'count': 5},
-      {'name': 'Mindset', 'count': 4},
+      {'name': 'Semua Motivasi', 'count': widget.bootstrap.quotes.length},
+      ...grouped.entries.map((e) => {'name': e.key, 'count': e.value}),
     ];
 
     return Container(
@@ -303,6 +273,7 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
 
 
   Widget _buildTodayCard() {
+    final motivation = widget.bootstrap.dashboard.motivation;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -344,9 +315,9 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          const Text(
-            '"Disiplin hari ini adalah\nkeberhasilan masa depanmu."',
-            style: TextStyle(
+          Text(
+            '"${motivation.quote}"',
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
@@ -354,9 +325,9 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            '– Target365',
-            style: TextStyle(
+          Text(
+            '– ${motivation.author}',
+            style: const TextStyle(
               fontSize: 13,
               color: AppColors.textSecondary,
             ),

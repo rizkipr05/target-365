@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../theme/app_theme.dart';
+import '../../services/app_api.dart';
 import '../../widgets/bottom_nav.dart';
 
 
@@ -13,6 +14,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _rememberMe = false;
+  bool _isLoading = false;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
@@ -23,10 +25,43 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  void _doLogin() {
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainNavigation()),
-    );
+  Future<void> _doLogin() async {
+    final email = _emailController.text.trim();
+    final password = _passwordController.text;
+
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email/username dan password wajib diisi')),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    try {
+      await AppApi.instance.login(
+        email: email,
+        password: password,
+        rememberMe: _rememberMe,
+      );
+      if (!mounted) return;
+      Navigator.of(context).pushReplacement(
+        MaterialPageRoute(builder: (_) => const MainNavigation()),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login gagal: $e')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   @override
@@ -249,22 +284,29 @@ class _LoginScreenState extends State<LoginScreen> {
                 _buildPasswordTextField(),
                 const SizedBox(height: 14),
                 // Remember me + Forgot password
-                Row(
+                Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  runSpacing: 8,
                   children: [
-                    SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: Checkbox(
-                        value: _rememberMe,
-                        activeColor: AppColors.primary,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
-                        side: const BorderSide(color: AppColors.border, width: 1.5),
-                        onChanged: (v) => setState(() => _rememberMe = v ?? false),
-                      ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: Checkbox(
+                            value: _rememberMe,
+                            activeColor: AppColors.primary,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                            side: const BorderSide(color: AppColors.border, width: 1.5),
+                            onChanged: (v) => setState(() => _rememberMe = v ?? false),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        const Text('Ingat saya', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
+                      ],
                     ),
-                    const SizedBox(width: 8),
-                    const Text('Ingat saya', style: TextStyle(fontSize: 13, color: AppColors.textSecondary)),
-                    const Spacer(),
                     GestureDetector(
                       onTap: () {},
                       child: const Text(
@@ -280,17 +322,26 @@ class _LoginScreenState extends State<LoginScreen> {
                   width: double.infinity,
                   height: 50,
                   child: ElevatedButton(
-                    onPressed: _doLogin,
+                    onPressed: _isLoading ? null : _doLogin,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.primary,
                       foregroundColor: Colors.white,
                       elevation: 0,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     ),
-                    child: const Text(
-                      'Masuk',
-                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                    ),
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Text(
+                            'Masuk',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 28),
