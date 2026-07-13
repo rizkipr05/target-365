@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/app_api.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
@@ -39,7 +42,7 @@ class LaporanScreen extends StatelessWidget {
                         label: 'Unduh',
                         icon: Icons.download_rounded,
                         outlined: true,
-                        onTap: () {},
+                        onTap: () => _exportReport(context),
                       ),
                     ),
                   ],
@@ -71,7 +74,7 @@ class LaporanScreen extends StatelessWidget {
                         label: 'Unduh Laporan',
                         icon: Icons.download_rounded,
                         outlined: true,
-                        onTap: () {},
+                        onTap: () => _exportReport(context),
                       ),
                     ],
                   ),
@@ -131,7 +134,7 @@ class LaporanScreen extends StatelessWidget {
               ],
               const SizedBox(height: 16),
               // Filter section
-              _buildFilterResponsive(isDesktop),
+              _buildFilterResponsive(context, isDesktop),
               const SizedBox(height: 16),
               if (isDesktop)
                 Row(
@@ -160,7 +163,7 @@ class LaporanScreen extends StatelessWidget {
                           const SizedBox(height: 16),
                           _buildRingkasanPerKategoriCard(),
                           const SizedBox(height: 16),
-                          _buildAchievement(),
+                          _buildAchievement(context),
                           const SizedBox(height: 16),
                           _buildTrenProgres(),
                         ],
@@ -174,7 +177,7 @@ class LaporanScreen extends StatelessWidget {
                 const SizedBox(height: 14),
                 _buildTargetList(),
                 const SizedBox(height: 14),
-                _buildAchievement(),
+                _buildAchievement(context),
                 const SizedBox(height: 14),
                 _buildTrenProgres(),
               ],
@@ -218,7 +221,7 @@ class LaporanScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterResponsive(bool isDesktop) {
+  Widget _buildFilterResponsive(BuildContext context, bool isDesktop) {
     if (!isDesktop) return _buildFilter();
 
     return Container(
@@ -294,11 +297,23 @@ class LaporanScreen extends StatelessWidget {
           PrimaryButton(
             label: 'Terapkan Filter',
             icon: Icons.filter_alt,
-            onTap: () {},
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Filter laporan belum tersedia'),
+                ),
+              );
+            },
           ),
           const SizedBox(width: 12),
           TextButton(
-            onPressed: () {},
+            onPressed: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Reset filter belum tersedia'),
+                ),
+              );
+            },
             child: const Text('Reset', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
           ),
         ],
@@ -767,7 +782,7 @@ class LaporanScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildAchievement() {
+  Widget _buildAchievement(BuildContext context) {
     final stats = bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(16),
@@ -816,7 +831,7 @@ class LaporanScreen extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           GestureDetector(
-            onTap: () {},
+            onTap: () => _showAchievementDetails(context),
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -843,6 +858,17 @@ class LaporanScreen extends StatelessWidget {
   Widget _buildTrenProgres() {
     final months = bootstrap.report.trends.map((item) => item['label'] ?? '').toList();
     final values = bootstrap.report.trends.map((item) => int.tryParse(item['value'] ?? '0') ?? 0).toList();
+    if (values.isEmpty) {
+      return Container(
+        padding: const EdgeInsets.all(14),
+        decoration: BoxDecoration(
+          color: AppColors.cardBg,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: const Text('Data tren belum tersedia', style: AppTextStyles.bodySmall),
+      );
+    }
     final maxVal = values.reduce((a, b) => a > b ? a : b);
 
     return Container(
@@ -898,6 +924,57 @@ class LaporanScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> _exportReport(BuildContext context) async {
+    try {
+      final export = await AppApi.instance.exportReport(userId: bootstrap.user.id);
+      final file = File('${Directory.systemTemp.path}/${export.filename}');
+      await file.writeAsString(export.content, flush: true);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Laporan disimpan ke ${file.path}')),
+      );
+    } on ApiException catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal mengekspor laporan: $e')),
+      );
+    }
+  }
+
+  Future<void> _showAchievementDetails(BuildContext context) async {
+    final stats = bootstrap.summary;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Detail Pencapaian'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Total target: ${stats.totalTargets}'),
+              Text('Selesai: ${stats.completedTargets}'),
+              Text('Sedang berjalan: ${stats.inProgressTargets}'),
+              Text('Belum dimulai: ${stats.notStartedTargets}'),
+              Text('Rata-rata penyelesaian: ${stats.averageCompletion.toStringAsFixed(0)}%'),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
     );
   }
 }

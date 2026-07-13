@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/app_api.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 import '../../state/app_session.dart';
@@ -15,6 +16,7 @@ class ProfilScreen extends StatefulWidget {
 }
 
 class _ProfilScreenState extends State<ProfilScreen> {
+  late AppBootstrap _bootstrap;
   String _activeMenu = 'Profil Saya';
 
   // Pengaturan Akun toggles
@@ -46,7 +48,8 @@ class _ProfilScreenState extends State<ProfilScreen> {
   @override
   void initState() {
     super.initState();
-    final profile = widget.bootstrap.profile;
+    _bootstrap = widget.bootstrap;
+    final profile = _bootstrap.profile;
     _twoFactor = profile.twoFactor;
     _darkMode = profile.darkMode;
     _compactView = profile.compactView;
@@ -74,7 +77,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   actions: [
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
-                      onPressed: () {},
+                      onPressed: _showEditProfileDialog,
                     ),
                   ],
                 ),
@@ -256,7 +259,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildPengaturanAkun(bool isDesktop) {
-    final profile = widget.bootstrap.profile;
+    final profile = _bootstrap.profile;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -289,17 +292,22 @@ class _ProfilScreenState extends State<ProfilScreen> {
                     height: 64,
                     decoration: const BoxDecoration(
                       shape: BoxShape.circle,
-                      image: DecorationImage(
-                        image: NetworkImage('https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80'),
-                        fit: BoxFit.cover,
-                      ),
+                    ),
+                    clipBehavior: Clip.antiAlias,
+                    child: Image.network(
+                      _bootstrap.profile.avatarUrl,
+                      fit: BoxFit.cover,
                     ),
                   ),
                   const SizedBox(width: 16),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      PrimaryButton(label: 'Ganti Foto', icon: Icons.upload_rounded, onTap: () {}),
+                      PrimaryButton(
+                        label: 'Ganti Foto',
+                        icon: Icons.upload_rounded,
+                        onTap: _showAvatarUpdateDialog,
+                      ),
                       const SizedBox(height: 8),
                       const Text('Format: JPG, PNG. Maks 2MB', style: AppTextStyles.caption),
                     ],
@@ -326,15 +334,19 @@ class _ProfilScreenState extends State<ProfilScreen> {
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: AppColors.border),
                     ),
-                    child: const Text(
-                      'Saya adalah seseorang yang sedang belajar menjadi versi terbaik dari diri sendiri setiap hari.',
+                    child: Text(
+                      _bootstrap.profile.about,
                       style: TextStyle(fontSize: 13, color: AppColors.textPrimary, height: 1.5),
                     ),
                   ),
                   const SizedBox(height: 12),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: PrimaryButton(label: 'Simpan Perubahan', icon: Icons.save_outlined, onTap: () {}),
+                    child: PrimaryButton(
+                      label: 'Simpan Perubahan',
+                      icon: Icons.save_outlined,
+                      onTap: _showEditProfileDialog,
+                    ),
                   ),
                 ],
               ),
@@ -348,7 +360,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildKeamanan(bool isDesktop) {
-    final profile = widget.bootstrap.profile;
+    final profile = _bootstrap.profile;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -387,7 +399,11 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   const SizedBox(height: 16),
                   Align(
                     alignment: Alignment.centerRight,
-                    child: PrimaryButton(label: 'Perbarui Password', icon: Icons.lock_reset_rounded, onTap: () {}),
+                    child: PrimaryButton(
+                      label: 'Perbarui Password',
+                      icon: Icons.lock_reset_rounded,
+                      onTap: _showChangePasswordDialog,
+                    ),
                   ),
                 ],
               ),
@@ -450,7 +466,13 @@ class _ProfilScreenState extends State<ProfilScreen> {
             Padding(
               padding: const EdgeInsets.all(12),
               child: TextButton.icon(
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Keluar dari sesi lain belum tersedia'),
+                    ),
+                  );
+                },
                 icon: const Icon(Icons.logout_rounded, color: AppColors.danger, size: 16),
                 label: const Text('Keluar dari Semua Sesi Lain', style: TextStyle(color: AppColors.danger, fontSize: 13)),
               ),
@@ -580,7 +602,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(8), color: AppColors.surface),
-                          child: Text(widget.bootstrap.profile.dndStart, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          child: Text(_bootstrap.profile.dndStart, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -597,7 +619,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                           decoration: BoxDecoration(border: Border.all(color: AppColors.border), borderRadius: BorderRadius.circular(8), color: AppColors.surface),
-                          child: Text(widget.bootstrap.profile.dndEnd, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
+                          child: Text(_bootstrap.profile.dndEnd, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600)),
                         ),
                       ],
                     ),
@@ -612,7 +634,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildAktivitasSaya(bool isDesktop) {
-    final activities = widget.bootstrap.profile.activities;
+    final activities = _bootstrap.profile.activities;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -671,6 +693,325 @@ class _ProfilScreenState extends State<ProfilScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _showEditProfileDialog() async {
+    final profile = _bootstrap.profile;
+    final nameController = TextEditingController(text: profile.name);
+    final usernameController = TextEditingController(text: profile.username);
+    final emailController = TextEditingController(text: profile.email);
+    final phoneController = TextEditingController(text: profile.phone);
+    final taglineController = TextEditingController(text: profile.tagline);
+    final aboutController = TextEditingController(text: profile.about);
+    final locationController = TextEditingController(text: profile.location);
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Edit Profil'),
+            content: SizedBox(
+              width: 460,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: nameController,
+                      decoration: const InputDecoration(labelText: 'Nama Lengkap'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: usernameController,
+                      decoration: const InputDecoration(labelText: 'Username'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: emailController,
+                      decoration: const InputDecoration(labelText: 'Email'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: phoneController,
+                      decoration: const InputDecoration(labelText: 'No. Telepon'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: locationController,
+                      decoration: const InputDecoration(labelText: 'Lokasi'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: taglineController,
+                      decoration: const InputDecoration(labelText: 'Tagline'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: aboutController,
+                      maxLines: 4,
+                      decoration: const InputDecoration(labelText: 'Tentang Saya'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (result != true) return;
+      await _saveProfileUpdate(
+        name: nameController.text.trim(),
+        username: usernameController.text.trim(),
+        email: emailController.text.trim(),
+        phone: phoneController.text.trim(),
+        location: locationController.text.trim(),
+        tagline: taglineController.text.trim(),
+        about: aboutController.text.trim(),
+      );
+    } finally {
+      nameController.dispose();
+      usernameController.dispose();
+      emailController.dispose();
+      phoneController.dispose();
+      taglineController.dispose();
+      aboutController.dispose();
+      locationController.dispose();
+    }
+  }
+
+  Future<void> _showAvatarUpdateDialog() async {
+    final sourceController = TextEditingController(text: _bootstrap.profile.avatarUrl);
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Ganti Foto Profil'),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: sourceController,
+                    decoration: const InputDecoration(
+                      labelText: 'URL gambar atau path file lokal',
+                      hintText: 'https://... atau /path/to/image.jpg',
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (result != true) return;
+
+      final source = sourceController.text.trim();
+      if (source.isEmpty) {
+        throw const ApiException('Sumber foto profil wajib diisi');
+      }
+
+      final updated = source.startsWith('http://') || source.startsWith('https://')
+          ? await AppApi.instance.updateAvatarUrl(
+              userId: _bootstrap.user.id,
+              avatarUrl: source,
+            )
+          : await AppApi.instance.uploadProfileAvatar(
+              userId: _bootstrap.user.id,
+              filePath: source,
+            );
+
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() {
+        _bootstrap = refreshed;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Foto profil berhasil diperbarui')),
+      );
+      AppSession.instance.cacheBootstrap(
+        AppBootstrap(
+          user: refreshed.user,
+          summary: refreshed.summary,
+          dashboard: refreshed.dashboard,
+          targets: refreshed.targets,
+          categories: refreshed.categories,
+          quotes: refreshed.quotes,
+          report: refreshed.report,
+          calendar: refreshed.calendar,
+          profile: updated,
+          notificationsCount: refreshed.notificationsCount,
+        ),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      sourceController.dispose();
+    }
+  }
+
+  Future<void> _showChangePasswordDialog() async {
+    final currentController = TextEditingController();
+    final newController = TextEditingController();
+    final confirmController = TextEditingController();
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return AlertDialog(
+            title: const Text('Ubah Password'),
+            content: SizedBox(
+              width: 420,
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    TextField(
+                      controller: currentController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Password Saat Ini'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: newController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Password Baru'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: confirmController,
+                      obscureText: true,
+                      decoration: const InputDecoration(labelText: 'Konfirmasi Password Baru'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogContext, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(dialogContext, true),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (result != true) return;
+
+      await AppApi.instance.updatePassword(
+        userId: _bootstrap.user.id,
+        currentPassword: currentController.text.trim(),
+        newPassword: newController.text.trim(),
+        confirmPassword: confirmController.text.trim(),
+      );
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() => _bootstrap = refreshed);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Password berhasil diperbarui')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      currentController.dispose();
+      newController.dispose();
+      confirmController.dispose();
+    }
+  }
+
+  Future<void> _saveProfileUpdate({
+    required String name,
+    required String username,
+    required String email,
+    required String phone,
+    required String location,
+    required String tagline,
+    required String about,
+  }) async {
+    try {
+      final updated = await AppApi.instance.updateProfile({
+        'userId': _bootstrap.user.id,
+        'name': name,
+        'username': username,
+        'email': email,
+        'phone': phone,
+        'location': location,
+        'tagline': tagline,
+        'about': about,
+        'language': _language,
+        'dateFormat': _dateFormat,
+        'darkMode': _darkMode,
+        'compactView': _compactView,
+        'twoFactor': _twoFactor,
+        'notifPush': _notifPush,
+        'notifEmail': _notifEmail,
+        'notifTargetReminder': _notifTargetReminder,
+        'notifAchievement': _notifAchievement,
+        'notifWeekly': _notifWeekly,
+        'notifMotivasi': _notifMotivasi,
+      });
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() {
+        _bootstrap = refreshed;
+        _twoFactor = updated.twoFactor;
+        _darkMode = updated.darkMode;
+        _compactView = updated.compactView;
+        _language = updated.language;
+        _dateFormat = updated.dateFormat;
+        _notifPush = updated.notifPush;
+        _notifEmail = updated.notifEmail;
+        _notifTargetReminder = updated.notifTargetReminder;
+        _notifAchievement = updated.notifAchievement;
+        _notifWeekly = updated.notifWeekly;
+        _notifMotivasi = updated.notifMotivasi;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profil berhasil disimpan')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
   }
 
   // ─── Helper Widgets ───────────────────────────────────────────────────────
@@ -820,7 +1161,16 @@ class _ProfilScreenState extends State<ProfilScreen> {
               child: const Text('Perangkat Ini', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w700, color: AppColors.primaryDark)),
             )
           else
-            TextButton(onPressed: () {}, child: const Text('Keluar', style: TextStyle(fontSize: 12, color: AppColors.danger))),
+            TextButton(
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Keluar dari sesi ini belum tersedia'),
+                  ),
+                );
+              },
+              child: const Text('Keluar', style: TextStyle(fontSize: 12, color: AppColors.danger)),
+            ),
         ],
       ),
     );
@@ -872,7 +1222,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: _showEditProfileDialog,
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                     decoration: BoxDecoration(
@@ -891,7 +1241,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildProfileHeroCard(bool isDesktop) {
-    final profile = widget.bootstrap.profile;
+    final profile = _bootstrap.profile;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -1006,7 +1356,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
                   label: 'Edit Profil',
                   icon: Icons.edit,
                   outlined: true,
-                  onTap: () {},
+                  onTap: _showEditProfileDialog,
                 ),
               ],
             ],
@@ -1089,7 +1439,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildPersonalInformation() {
-    final profile = widget.bootstrap.profile;
+    final profile = _bootstrap.profile;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1136,7 +1486,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildAboutMeCard() {
-    final profile = widget.bootstrap.profile;
+    final profile = _bootstrap.profile;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1152,7 +1502,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
             children: [
               const Text('Tentang Saya', style: AppTextStyles.h3),
               GestureDetector(
-                onTap: () {},
+                onTap: _showEditProfileDialog,
                 child: const Text('Edit Tentang Saya', style: TextStyle(fontSize: 11, color: AppColors.primary, fontWeight: FontWeight.w600)),
               ),
             ],
@@ -1168,7 +1518,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildRecentAchievements() {
-    final achievements = widget.bootstrap.profile.achievements;
+    final achievements = _bootstrap.profile.achievements;
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -1224,7 +1574,7 @@ class _ProfilScreenState extends State<ProfilScreen> {
   }
 
   Widget _buildRecentActivities(bool isDesktop) {
-    final activities = widget.bootstrap.profile.activities;
+    final activities = _bootstrap.profile.activities;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

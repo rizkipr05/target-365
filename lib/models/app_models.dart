@@ -557,7 +557,25 @@ class ReportData {
   }
 }
 
+class ReportExportData {
+  final String filename;
+  final String content;
+
+  const ReportExportData({
+    required this.filename,
+    required this.content,
+  });
+
+  factory ReportExportData.fromJson(Map<String, dynamic> json) {
+    return ReportExportData(
+      filename: _stringValue(json['filename'], 'target365-report.csv'),
+      content: _stringValue(json['content']),
+    );
+  }
+}
+
 class CalendarEntry {
+  final int id;
   final int day;
   final String title;
   final Color color;
@@ -565,6 +583,7 @@ class CalendarEntry {
   final String type;
 
   const CalendarEntry({
+    required this.id,
     required this.day,
     required this.title,
     required this.color,
@@ -574,6 +593,7 @@ class CalendarEntry {
 
   factory CalendarEntry.fromJson(Map<String, dynamic> json) {
     return CalendarEntry(
+      id: _intValue(json['id']),
       day: _intValue(json['day']),
       title: _stringValue(json['title']),
       color: colorFromHex(_stringValue(json['color'])),
@@ -886,4 +906,3 @@ class AppBootstrap {
     );
   }
 }
-

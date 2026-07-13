@@ -277,7 +277,25 @@ class _MainNavigationState extends State<MainNavigation> {
                 children: [
                   IconButton(
                     icon: const Icon(Icons.notifications_outlined, color: AppColors.textPrimary),
-                    onPressed: () {},
+                    onPressed: () {
+                      showDialog<void>(
+                        context: context,
+                        builder: (dialogContext) {
+                          return AlertDialog(
+                            title: const Text('Notifikasi'),
+                            content: Text(
+                              'Ada ${bootstrap.notificationsCount} notifikasi aktif untuk akun ini.',
+                            ),
+                            actions: [
+                              TextButton(
+                                onPressed: () => Navigator.pop(dialogContext),
+                                child: const Text('Tutup'),
+                              ),
+                            ],
+                          );
+                        },
+                      );
+                    },
                   ),
                   Positioned(
                     right: 8,

@@ -1,14 +1,28 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/app_api.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
-class KategoriScreen extends StatelessWidget {
+class KategoriScreen extends StatefulWidget {
   final AppBootstrap bootstrap;
 
   const KategoriScreen({super.key, required this.bootstrap});
 
-  List<_KategoriData> get _categories => bootstrap.categories
+  @override
+  State<KategoriScreen> createState() => _KategoriScreenState();
+}
+
+class _KategoriScreenState extends State<KategoriScreen> {
+  late AppBootstrap _bootstrap;
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap = widget.bootstrap;
+  }
+
+  List<_KategoriData> get _categories => _bootstrap.categories
       .map(
         (c) => _KategoriData(
           icon: c.icon,
@@ -39,7 +53,7 @@ class KategoriScreen extends StatelessWidget {
                       child: PrimaryButton(
                         label: 'Tambah',
                         icon: Icons.add,
-                        onTap: () {},
+                        onTap: _showAddCategoryDialog,
                       ),
                     ),
                   ],
@@ -65,7 +79,7 @@ class KategoriScreen extends StatelessWidget {
                       PrimaryButton(
                         label: 'Tambah Kategori',
                         icon: Icons.add,
-                        onTap: () {},
+                        onTap: _showAddCategoryDialog,
                       ),
                     ],
                   ),
@@ -100,7 +114,7 @@ class KategoriScreen extends StatelessWidget {
                     icon: Icons.visibility_rounded,
                     iconColor: AppColors.warning,
                     title: 'Total Digunakan',
-                    value: '${bootstrap.targets.length}',
+                    value: '${_bootstrap.targets.length}',
                     subtitle: 'Target menggunakan',
                   ),
                   StatCard(
@@ -140,7 +154,13 @@ class KategoriScreen extends StatelessWidget {
                                     style: AppTextStyles.h3),
                                 const Spacer(),
                                 TextButton(
-                                  onPressed: () {},
+                                  onPressed: () {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      const SnackBar(
+                                        content: Text('Reset filter belum dihubungkan'),
+                                      ),
+                                    );
+                                  },
                                   child: const Text('Reset', style: TextStyle(fontSize: 12)),
                                 ),
                               ],
@@ -264,7 +284,13 @@ class KategoriScreen extends StatelessWidget {
                           style: AppTextStyles.h3),
                       const Spacer(),
                       TextButton(
-                        onPressed: () {},
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Reset filter belum dihubungkan'),
+                            ),
+                          );
+                        },
                         style: TextButton.styleFrom(
                           foregroundColor: AppColors.primary,
                           padding: EdgeInsets.zero,
@@ -321,6 +347,72 @@ class KategoriScreen extends StatelessWidget {
     );
   }
 
+  Future<void> _showAddCategoryDialog() async {
+    final nameController = TextEditingController();
+    final descriptionController = TextEditingController();
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Tambah Kategori'),
+            content: SizedBox(
+              width: 420,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Nama kategori'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: descriptionController,
+                    maxLines: 3,
+                    decoration: const InputDecoration(labelText: 'Deskripsi'),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (result != true) return;
+      await AppApi.instance.createCategory({
+        'userId': _bootstrap.user.id,
+        'name': nameController.text.trim(),
+        'description': descriptionController.text.trim(),
+        'jumlahTarget': '0 target',
+      });
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() => _bootstrap = refreshed);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kategori berhasil ditambahkan')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      nameController.dispose();
+      descriptionController.dispose();
+    }
+  }
+
   Widget _buildCategoryRow(_KategoriData data) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 8),
@@ -363,14 +455,26 @@ class KategoriScreen extends StatelessWidget {
             children: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined, size: 16, color: AppColors.textMuted),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Edit kategori belum tersedia'),
+                    ),
+                  );
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
               const SizedBox(width: 8),
               IconButton(
                 icon: const Icon(Icons.more_vert, size: 16, color: AppColors.textMuted),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Aksi kategori lanjutan belum tersedia'),
+                    ),
+                  );
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -461,7 +565,13 @@ class _CategoryCard extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.edit_outlined,
                     size: 16, color: AppColors.textMuted),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Edit kategori belum tersedia'),
+                    ),
+                  );
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -469,7 +579,13 @@ class _CategoryCard extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.more_vert,
                     size: 16, color: AppColors.textMuted),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Aksi kategori lanjutan belum tersedia'),
+                    ),
+                  );
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),

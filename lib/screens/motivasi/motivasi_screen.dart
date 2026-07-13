@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/app_api.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
@@ -13,12 +14,19 @@ class MotivasiScreen extends StatefulWidget {
 }
 
 class _MotivasiScreenState extends State<MotivasiScreen> {
+  late AppBootstrap _bootstrap;
   String _activeTab = 'Semua';
   final List<String> _tabs = [
     'Semua', 'Inspirasi', 'Produktivitas', 'Kehidupan', 'Kebiasaan', 'Mindset'
   ];
 
-  List<_QuoteData> get _quotes => widget.bootstrap.quotes
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap = widget.bootstrap;
+  }
+
+  List<_QuoteData> get _quotes => _bootstrap.quotes
       .map(
         (q) => _QuoteData(
           category: q.category,
@@ -48,7 +56,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
                         label: 'Arsip',
                         icon: Icons.bookmark_border_rounded,
                         outlined: true,
-                        onTap: () {},
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Arsip motivasi belum tersedia'),
+                            ),
+                          );
+                        },
                       ),
                     ),
                   ],
@@ -75,7 +89,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
                         label: 'Arsip Motivasi',
                         icon: Icons.bookmark_border_rounded,
                         outlined: true,
-                        onTap: () {},
+                        onTap: () {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('Arsip motivasi belum tersedia'),
+                            ),
+                          );
+                        },
                       ),
                     ],
                   ),
@@ -138,11 +158,11 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
 
   Widget _buildCategoryListCard() {
     final grouped = <String, int>{};
-    for (final quote in widget.bootstrap.quotes) {
+    for (final quote in _bootstrap.quotes) {
       grouped[quote.category] = (grouped[quote.category] ?? 0) + 1;
     }
     final categories = [
-      {'name': 'Semua Motivasi', 'count': widget.bootstrap.quotes.length},
+      {'name': 'Semua Motivasi', 'count': _bootstrap.quotes.length},
       ...grouped.entries.map((e) => {'name': e.key, 'count': e.value}),
     ];
 
@@ -159,7 +179,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
           const Text('Kategori Motivasi', style: AppTextStyles.h3),
           const SizedBox(height: 12),
           ...categories.map((c) => InkWell(
-                onTap: () {},
+                onTap: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Filter kategori motivasi belum tersedia'),
+                    ),
+                  );
+                },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   child: Row(
@@ -232,12 +258,91 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
             child: PrimaryButton(
               label: 'Kirim Motivasi',
               icon: Icons.send_rounded,
-              onTap: () {},
+              onTap: _showSendMotivationDialog,
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _showSendMotivationDialog() async {
+    final quoteController = TextEditingController();
+    String selectedCategory = _tabs[1];
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Kirim Motivasi'),
+            content: StatefulBuilder(
+              builder: (context, setLocalState) {
+                return SizedBox(
+                  width: 420,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: selectedCategory,
+                        decoration: const InputDecoration(labelText: 'Kategori'),
+                        items: _tabs
+                            .skip(1)
+                            .map((item) => DropdownMenuItem(value: item, child: Text(item)))
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setLocalState(() => selectedCategory = value);
+                        },
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: quoteController,
+                        maxLines: 3,
+                        decoration: const InputDecoration(
+                          labelText: 'Kutipan',
+                          hintText: 'Tulis kutipan motivasi di sini...',
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Kirim'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (result != true) return;
+      await AppApi.instance.createMotivation({
+        'userId': _bootstrap.user.id,
+        'category': selectedCategory,
+        'quote': quoteController.text.trim(),
+      });
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() => _bootstrap = refreshed);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Motivasi berhasil dikirim')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      quoteController.dispose();
+    }
   }
 
   List<Widget> _buildQuoteGridResponsive(bool isDesktop) {
@@ -273,7 +378,7 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
 
 
   Widget _buildTodayCard() {
-    final motivation = widget.bootstrap.dashboard.motivation;
+    final motivation = _bootstrap.dashboard.motivation;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -339,7 +444,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
               IconButton(
                 icon: const Icon(Icons.bookmark_border_rounded,
                     color: AppColors.textSecondary, size: 20),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Simpan motivasi belum tersedia'),
+                    ),
+                  );
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -347,7 +458,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
               IconButton(
                 icon: const Icon(Icons.share_rounded,
                     color: AppColors.textSecondary, size: 20),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Bagikan motivasi belum tersedia'),
+                    ),
+                  );
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -494,7 +611,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
         IconButton(
           icon:
               const Icon(Icons.chevron_left_rounded, color: AppColors.textMuted),
-          onPressed: () {},
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Navigasi halaman motivasi belum tersedia'),
+              ),
+            );
+          },
         ),
         Container(
           width: 32,
@@ -516,7 +639,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
           (n) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: GestureDetector(
-              onTap: () {},
+              onTap: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Navigasi halaman motivasi belum tersedia'),
+                  ),
+                );
+              },
               child: Container(
                 width: 32,
                 height: 32,
@@ -536,7 +665,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
         IconButton(
           icon: const Icon(Icons.chevron_right_rounded,
               color: AppColors.textMuted),
-          onPressed: () {},
+          onPressed: () {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Navigasi halaman motivasi belum tersedia'),
+              ),
+            );
+          },
         ),
       ],
     );

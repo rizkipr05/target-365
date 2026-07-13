@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import 'package:http/http.dart' as http;
 
@@ -129,6 +130,14 @@ class AppApi {
     return bootstrap;
   }
 
+  Future<AppBootstrap> refreshBootstrap() async {
+    final user = AppSession.instance.user;
+    if (user == null) {
+      throw const ApiException('Sesi login tidak ditemukan');
+    }
+    return bootstrap(user.id);
+  }
+
   Future<ProfileData> updateProfile(Map<String, dynamic> payload) async {
     final response = await _requestJson(
       'POST',
@@ -154,5 +163,125 @@ class AppApi {
       );
     }
     return profile;
+  }
+
+  Future<ProfileData> updatePassword({
+    required int userId,
+    required String currentPassword,
+    required String newPassword,
+    required String confirmPassword,
+  }) async {
+    await _requestJson(
+      'POST',
+      'password_update.php',
+      body: {
+        'userId': userId,
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+        'confirmPassword': confirmPassword,
+      },
+    );
+    return refreshProfile();
+  }
+
+  Future<ProfileData> refreshProfile() async {
+    final refreshed = await refreshBootstrap();
+    return refreshed.profile;
+  }
+
+  Future<ProfileData> updateAvatarUrl({
+    required int userId,
+    required String avatarUrl,
+  }) async {
+    return updateProfile({
+      'userId': userId,
+      'avatarUrl': avatarUrl,
+    });
+  }
+
+  Future<ProfileData> uploadProfileAvatar({
+    required int userId,
+    required String filePath,
+  }) async {
+    final file = File(filePath);
+    if (!await file.exists()) {
+      throw const ApiException('File foto tidak ditemukan');
+    }
+
+    final request = http.MultipartRequest('POST', _uri('profile_avatar_upload.php'));
+    request.headers.addAll(_headers());
+    request.fields['userId'] = '$userId';
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'avatar',
+        file.path,
+        filename: file.path.split(Platform.pathSeparator).last,
+      ),
+    );
+
+    final streamed = await request.send();
+    final response = await http.Response.fromStream(streamed);
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw ApiException('Request gagal (${response.statusCode}): ${response.body}');
+    }
+
+    final decoded = jsonDecode(response.body);
+    if (decoded is! Map<String, dynamic>) {
+      throw const ApiException('Format response API tidak valid');
+    }
+
+    final avatarUrl = decoded['data'] is Map<String, dynamic>
+        ? Map<String, dynamic>.from(decoded['data'] as Map)['avatarUrl']?.toString()
+        : null;
+    if (avatarUrl == null || avatarUrl.isEmpty) {
+      throw const ApiException('Avatar URL tidak ditemukan');
+    }
+
+    final refreshed = await refreshBootstrap();
+    return refreshed.profile;
+  }
+
+  Future<ReportExportData> exportReport({required int userId}) async {
+    final response = await _requestJson(
+      'GET',
+      'report_export.php',
+      queryParameters: {'userId': '$userId'},
+    );
+    return ReportExportData.fromJson(response.data);
+  }
+
+  Future<void> createTarget(Map<String, dynamic> payload) async {
+    await _requestJson('POST', 'target_create.php', body: payload);
+  }
+
+  Future<void> createCategory(Map<String, dynamic> payload) async {
+    await _requestJson('POST', 'category_create.php', body: payload);
+  }
+
+  Future<void> createMotivation(Map<String, dynamic> payload) async {
+    await _requestJson('POST', 'motivation_create.php', body: payload);
+  }
+
+  Future<CalendarEntry> saveCalendarEvent(Map<String, dynamic> payload) async {
+    final response = await _requestJson(
+      'POST',
+      'calendar_event_save.php',
+      body: payload,
+    );
+    return CalendarEntry.fromJson(response.data);
+  }
+
+  Future<void> deleteCalendarEvent({
+    required int userId,
+    required int id,
+  }) async {
+    await _requestJson(
+      'POST',
+      'calendar_event_delete.php',
+      body: {
+        'userId': userId,
+        'id': id,
+      },
+    );
   }
 }

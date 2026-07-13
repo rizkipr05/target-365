@@ -114,7 +114,25 @@ class BerandaScreen extends StatelessWidget {
               IconButton(
                 icon: const Icon(Icons.notifications_outlined,
                     color: AppColors.textPrimary),
-                onPressed: () {},
+                onPressed: () {
+                  showDialog<void>(
+                    context: context,
+                    builder: (dialogContext) {
+                      return AlertDialog(
+                        title: const Text('Notifikasi'),
+                        content: Text(
+                          'Ada ${bootstrap.notificationsCount} notifikasi aktif untuk akun Anda.\n\nPengingat target, motivasi harian, dan pembaruan aktivitas akan tampil di sini.',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(dialogContext),
+                            child: const Text('Tutup'),
+                          ),
+                        ],
+                      );
+                    },
+                  );
+                },
               ),
               Positioned(
                 right: 8,

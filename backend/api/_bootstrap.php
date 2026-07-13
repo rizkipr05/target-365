@@ -60,6 +60,19 @@ function db(): PDO
     return $pdo;
 }
 
+function public_url(string $path): string
+{
+    $scheme = 'http';
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        $scheme = 'https';
+    }
+
+    $host = (string) ($_SERVER['HTTP_HOST'] ?? '127.0.0.1');
+    $path = '/' . ltrim($path, '/');
+
+    return sprintf('%s://%s%s', $scheme, $host, $path);
+}
+
 function fetch_one(string $sql, array $params = []): ?array
 {
     $stmt = db()->prepare($sql);
@@ -124,4 +137,3 @@ function bool_value($value, bool $fallback = false): bool
 
     return $fallback;
 }
-

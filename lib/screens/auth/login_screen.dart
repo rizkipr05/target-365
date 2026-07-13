@@ -308,7 +308,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       ],
                     ),
                     GestureDetector(
-                      onTap: () {},
+                      onTap: () {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Fitur lupa kata sandi belum tersedia'),
+                          ),
+                        );
+                      },
                       child: const Text(
                         'Lupa kata sandi?',
                         style: TextStyle(fontSize: 13, color: AppColors.primary, fontWeight: FontWeight.w600),
@@ -354,7 +360,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         WidgetSpan(
                           child: GestureDetector(
-                            onTap: () {},
+                            onTap: () {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text('Pendaftaran akun belum tersedia'),
+                                ),
+                              );
+                            },
                             child: const Text(
                               'Daftar sekarang',
                               style: TextStyle(
@@ -429,7 +441,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Widget _buildSocialButton(String label, String letter, Color color, {bool isApple = false}) {
     return OutlinedButton(
-      onPressed: () {},
+      onPressed: () {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Login dengan $label belum tersedia'),
+          ),
+        );
+      },
       style: OutlinedButton.styleFrom(
         side: const BorderSide(color: AppColors.border),
         padding: const EdgeInsets.symmetric(vertical: 13),

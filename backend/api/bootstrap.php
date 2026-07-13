@@ -94,7 +94,7 @@ $reportTrends = fetch_all(
 );
 
 $calendarEntries = fetch_all(
-    'SELECT day, title, color, time_label AS time, event_type AS type
+    'SELECT id, day, title, color, time_label AS time, event_type AS type
      FROM calendar_events
      WHERE user_id = :userId
      ORDER BY day ASC, sort_order ASC, id ASC',

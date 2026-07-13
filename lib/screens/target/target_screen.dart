@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/app_models.dart';
+import '../../services/app_api.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
@@ -13,8 +14,15 @@ class TargetScreen extends StatefulWidget {
 }
 
 class _TargetScreenState extends State<TargetScreen> {
+  late AppBootstrap _bootstrap;
   String _selectedFilter = 'Semua';
   final List<String> _filters = ['Semua', 'Berjalan', 'Selesai', 'Belum Dimulai'];
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap = widget.bootstrap;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -33,7 +41,7 @@ class _TargetScreenState extends State<TargetScreen> {
                       child: PrimaryButton(
                         label: 'Tambah',
                         icon: Icons.add,
-                        onTap: () {},
+                        onTap: _showAddTargetDialog,
                       ),
                     ),
                   ],
@@ -59,7 +67,7 @@ class _TargetScreenState extends State<TargetScreen> {
                       PrimaryButton(
                         label: 'Tambah Target',
                         icon: Icons.add,
-                        onTap: () {},
+                        onTap: _showAddTargetDialog,
                       ),
                     ],
                   ),
@@ -88,7 +96,7 @@ class _TargetScreenState extends State<TargetScreen> {
   }
 
   List<Widget> _buildTargetList() {
-    final targets = widget.bootstrap.targets;
+    final targets = _bootstrap.targets;
     return targets
         .asMap()
         .entries
@@ -112,6 +120,109 @@ class _TargetScreenState extends State<TargetScreen> {
           ),
         )
         .toList();
+  }
+
+  Future<void> _showAddTargetDialog() async {
+    final titleController = TextEditingController();
+    final deadlineController = TextEditingController();
+    String selectedCategory = _bootstrap.categories.isNotEmpty
+        ? _bootstrap.categories.first.name
+        : 'Pengembangan Diri';
+    String selectedPriority = 'Sedang';
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Tambah Target'),
+            content: StatefulBuilder(
+              builder: (context, setLocalState) {
+                return SizedBox(
+                  width: 420,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(labelText: 'Judul target'),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: selectedCategory,
+                          decoration: const InputDecoration(labelText: 'Kategori'),
+                          items: _bootstrap.categories
+                              .map((category) => DropdownMenuItem(
+                                    value: category.name,
+                                    child: Text(category.name),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setLocalState(() => selectedCategory = value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: selectedPriority,
+                          decoration: const InputDecoration(labelText: 'Prioritas'),
+                          items: const ['Rendah', 'Sedang', 'Tinggi']
+                              .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setLocalState(() => selectedPriority = value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: deadlineController,
+                          decoration: const InputDecoration(labelText: 'Deadline', hintText: '31 Des 2025'),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text('Batal'),
+              ),
+              ElevatedButton(
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Simpan'),
+              ),
+            ],
+          );
+        },
+      );
+
+      if (result != true) return;
+      await AppApi.instance.createTarget({
+        'userId': _bootstrap.user.id,
+        'title': titleController.text.trim(),
+        'category': selectedCategory,
+        'priority': selectedPriority,
+        'deadline': deadlineController.text.trim(),
+      });
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() => _bootstrap = refreshed);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Target berhasil ditambahkan')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      titleController.dispose();
+      deadlineController.dispose();
+    }
   }
 
   Widget _buildFilterTabs() {
@@ -226,7 +337,13 @@ class _TargetScreenState extends State<TargetScreen> {
               IconButton(
                 icon: const Icon(Icons.more_vert,
                     size: 18, color: AppColors.textMuted),
-                onPressed: () {},
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Aksi target lanjutan belum tersedia'),
+                    ),
+                  );
+                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),

@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
   email VARCHAR(120) NOT NULL UNIQUE,
   password VARCHAR(255) NOT NULL,
   role VARCHAR(60) NOT NULL DEFAULT 'Pengguna',
+  join_date VARCHAR(40) NOT NULL DEFAULT '21 Mei 2025',
   avatar_url VARCHAR(255) NOT NULL,
   tagline VARCHAR(255) NOT NULL DEFAULT '',
   about TEXT NOT NULL,
@@ -171,4 +172,3 @@ CREATE TABLE IF NOT EXISTS profile_sessions (
   last_active DATETIME NOT NULL,
   FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
-

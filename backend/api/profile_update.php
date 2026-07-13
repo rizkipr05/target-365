@@ -32,6 +32,7 @@ $fields = [
     'about' => $payload['about'] ?? $existing['about'],
     'phone' => $payload['phone'] ?? $existing['phone'],
     'location' => $payload['location'] ?? $existing['location'],
+    'avatarUrl' => $payload['avatarUrl'] ?? $existing['avatar_url'],
     'language' => $payload['language'] ?? $existing['language'],
     'dateFormat' => $payload['dateFormat'] ?? $existing['date_format'],
 ];
@@ -57,6 +58,7 @@ $stmt = db()->prepare(
         about = :about,
         phone = :phone,
         location = :location,
+        avatar_url = :avatarUrl,
         language = :language,
         date_format = :dateFormat,
         dark_mode = :darkMode,
@@ -80,6 +82,7 @@ $stmt->execute([
     'about' => $fields['about'],
     'phone' => $fields['phone'],
     'location' => $fields['location'],
+    'avatarUrl' => $fields['avatarUrl'],
     'language' => $fields['language'],
     'dateFormat' => $fields['dateFormat'],
     'darkMode' => $settings['darkMode'] ? 1 : 0,
