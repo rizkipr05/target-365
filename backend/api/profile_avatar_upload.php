@@ -58,7 +58,7 @@ if (isset($_FILES['avatar']) && is_array($_FILES['avatar']) && ($_FILES['avatar'
         ], 500);
     }
 
-    $avatarUrl = public_url('backend/uploads/avatars/' . $filename);
+    $avatarUrl = public_url('uploads/avatars/' . $filename);
 } elseif ($avatarUrl === '') {
     json_response([
         'success' => false,

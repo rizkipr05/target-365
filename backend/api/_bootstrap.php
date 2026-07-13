@@ -12,17 +12,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
 }
 
+load_env_file(dirname(__DIR__) . '/.env');
+
 const DB_HOST = '127.0.0.1';
+const DB_PORT = 3306;
 const DB_NAME = 'target365';
 const DB_USER = 'root';
 const DB_PASS = '';
 const DB_CHARSET = 'utf8mb4';
+const DB_SOCKET = '';
 
 function json_response(array $payload, int $statusCode = 200): void
 {
     http_response_code($statusCode);
     echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     exit;
+}
+
+function load_env_file(string $path): void
+{
+    if (!is_file($path) || !is_readable($path)) {
+        return;
+    }
+
+    $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+    if ($lines === false) {
+        return;
+    }
+
+    foreach ($lines as $line) {
+        $line = trim($line);
+        if ($line === '' || str_starts_with($line, '#')) {
+            continue;
+        }
+        if (str_starts_with($line, 'export ')) {
+            $line = trim(substr($line, 7));
+        }
+        $pos = strpos($line, '=');
+        if ($pos === false) {
+            continue;
+        }
+
+        $key = trim(substr($line, 0, $pos));
+        $value = trim(substr($line, $pos + 1));
+
+        if ($key === '') {
+            continue;
+        }
+
+        if (
+            (str_starts_with($value, '"') && str_ends_with($value, '"')) ||
+            (str_starts_with($value, "'") && str_ends_with($value, "'"))
+        ) {
+            $value = substr($value, 1, -1);
+        }
+
+        putenv($key . '=' . $value);
+        $_ENV[$key] = $value;
+        $_SERVER[$key] = $value;
+    }
 }
 
 function input_json(): array
@@ -44,20 +92,47 @@ function db(): PDO
         return $pdo;
     }
 
-    $dsn = sprintf(
-        'mysql:host=%s;dbname=%s;charset=%s',
-        DB_HOST,
-        DB_NAME,
-        DB_CHARSET
-    );
+    $host = (string) (getenv('DB_HOST') ?: DB_HOST);
+    $port = (int) (getenv('DB_PORT') ?: DB_PORT);
+    $dbName = (string) (getenv('DB_NAME') ?: DB_NAME);
+    $dbUser = (string) (getenv('DB_USER') ?: DB_USER);
+    $dbPass = (string) (getenv('DB_PASS') ?: DB_PASS);
+    $socket = trim((string) (getenv('DB_SOCKET') ?: DB_SOCKET));
+    if ($socket === '') {
+        $socket = trim((string) ini_get('pdo_mysql.default_socket'));
+    }
 
-    $pdo = new PDO($dsn, DB_USER, DB_PASS, [
-        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-        PDO::ATTR_EMULATE_PREPARES => false,
-    ]);
+    $candidates = [];
+    $candidates[] = sprintf('mysql:host=%s;port=%d;dbname=%s;charset=%s', $host, $port, $dbName, DB_CHARSET);
+    if ($host !== '127.0.0.1') {
+        $candidates[] = sprintf('mysql:host=127.0.0.1;port=%d;dbname=%s;charset=%s', $port, $dbName, DB_CHARSET);
+    }
+    if ($host !== 'localhost') {
+        $candidates[] = sprintf('mysql:host=localhost;dbname=%s;charset=%s', $dbName, DB_CHARSET);
+    }
+    if ($socket !== '') {
+        $candidates[] = sprintf('mysql:unix_socket=%s;dbname=%s;charset=%s', $socket, $dbName, DB_CHARSET);
+    }
 
-    return $pdo;
+    $lastError = null;
+    foreach ($candidates as $dsn) {
+        try {
+            $pdo = new PDO($dsn, $dbUser, $dbPass, [
+                PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+                PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+                PDO::ATTR_EMULATE_PREPARES => false,
+            ]);
+            return $pdo;
+        } catch (Throwable $e) {
+            $lastError = $e;
+        }
+    }
+
+    json_response([
+        'success' => false,
+        'message' => 'Koneksi database gagal: ' . ($lastError?->getMessage() ?? 'unknown'),
+        'data' => new stdClass(),
+    ], 500);
 }
 
 function public_url(string $path): string

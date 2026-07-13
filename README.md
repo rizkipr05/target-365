@@ -31,15 +31,18 @@ flutter pub get
 
 1. Import [`backend/database/schema.sql`](/home/rizky/Documents/target365/target365_app/backend/database/schema.sql) ke MySQL lewat phpMyAdmin.
 2. Import [`backend/database/seed.sql`](/home/rizky/Documents/target365/target365_app/backend/database/seed.sql) untuk data contoh.
-3. Copy folder [`backend/api`](/home/rizky/Documents/target365/target365_app/backend/api) ke document root Apache, misalnya `htdocs/target365_api/api`.
-4. Sesuaikan koneksi database di [`backend/api/_bootstrap.php`](/home/rizky/Documents/target365/target365_app/backend/api/_bootstrap.php) jika username/password MySQL kamu berbeda.
+3. Copy folder [`backend/api`](/home/rizky/Documents/target365/target365_app/backend/api) ke document root Apache, misalnya menjadi `htdocs/target365_api/api`.
+   Pastikan aplikasi bisa diakses melalui `http://127.0.0.1:8080/target365_api/api/login.php`.
+
+4. Sesuaikan koneksi database lewat file [`backend/.env`](/home/rizky/Documents/target365/target365_app/backend/.env) atau salin dari [`backend/.env.example`](/home/rizky/Documents/target365/target365_app/backend/.env.example) jika username/password MySQL kamu berbeda.
+   Backend akan membaca `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, `DB_PASS`, dan `DB_SOCKET` dari file ini.
 5. Jalankan Flutter dengan base URL API:
 
 ```bash
-flutter run --dart-define=TARGET365_API_BASE_URL=http://127.0.0.1/target365_api/api
+flutter run --dart-define=TARGET365_API_BASE_URL=http://127.0.0.1:8080/target365_api/api
 ```
 
-Untuk Android emulator, pakai `http://10.0.2.2/target365_api/api`.
+Untuk Android emulator, pakai `http://10.0.2.2:8080/target365_api/api`.
 
 ## Build & Run
 

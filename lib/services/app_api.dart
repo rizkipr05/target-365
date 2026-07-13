@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -22,6 +23,7 @@ class AppApi {
   static final AppApi instance = AppApi._();
 
   final http.Client _client = http.Client();
+  static const Duration _timeout = Duration(seconds: 15);
 
   Uri _uri(String path, [Map<String, dynamic>? queryParameters]) {
     final base = AppConfig.apiBaseUrl.endsWith('/')
@@ -53,24 +55,24 @@ class AppApi {
 
     switch (method) {
       case 'GET':
-        response = await _client.get(uri, headers: _headers());
+        response = await _client.get(uri, headers: _headers()).timeout(_timeout);
         break;
       case 'POST':
         response = await _client.post(
           uri,
           headers: _headers(jsonBody: true),
           body: jsonEncode(body ?? const {}),
-        );
+        ).timeout(_timeout);
         break;
       case 'PUT':
         response = await _client.put(
           uri,
           headers: _headers(jsonBody: true),
           body: jsonEncode(body ?? const {}),
-        );
+        ).timeout(_timeout);
         break;
       case 'DELETE':
-        response = await _client.delete(uri, headers: _headers());
+        response = await _client.delete(uri, headers: _headers()).timeout(_timeout);
         break;
       default:
         throw const ApiException('Unsupported HTTP method');
@@ -219,8 +221,8 @@ class AppApi {
       ),
     );
 
-    final streamed = await request.send();
-    final response = await http.Response.fromStream(streamed);
+    final streamed = await request.send().timeout(_timeout);
+    final response = await http.Response.fromStream(streamed).timeout(_timeout);
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ApiException('Request gagal (${response.statusCode}): ${response.body}');
     }
