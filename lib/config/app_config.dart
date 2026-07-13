@@ -6,25 +6,45 @@ class AppConfig {
     defaultValue: '',
   );
 
+  static bool get hasExplicitApiBaseUrl => _defineApiBaseUrl.isNotEmpty;
+
   static String get apiBaseUrl {
+    final candidates = apiBaseUrlCandidates;
+    return candidates.first;
+  }
+
+  static List<String> get apiBaseUrlCandidates {
     if (_defineApiBaseUrl.isNotEmpty) {
-      return _defineApiBaseUrl;
+      return [_defineApiBaseUrl];
     }
 
-    if (kIsWeb) {
-      return 'http://127.0.0.1:8080/target365_api/api';
+    const paths = <String>[
+      'target365_api/api',
+      'target365_app/backend/api',
+      'backend/api',
+      'api',
+    ];
+
+    String hostForPlatform() {
+      if (kIsWeb) {
+        return '127.0.0.1';
+      }
+
+      switch (defaultTargetPlatform) {
+        case TargetPlatform.android:
+          return '10.0.2.2';
+        case TargetPlatform.iOS:
+        case TargetPlatform.macOS:
+        case TargetPlatform.linux:
+        case TargetPlatform.windows:
+        case TargetPlatform.fuchsia:
+          return '127.0.0.1';
+      }
     }
 
-    switch (defaultTargetPlatform) {
-      case TargetPlatform.android:
-        return 'http://10.0.2.2:8080/target365_api/api';
-      case TargetPlatform.iOS:
-      case TargetPlatform.macOS:
-      case TargetPlatform.linux:
-      case TargetPlatform.windows:
-        return 'http://127.0.0.1:8080/target365_api/api';
-      case TargetPlatform.fuchsia:
-        return 'http://127.0.0.1:8080/target365_api/api';
-    }
+    final host = hostForPlatform();
+    return [
+      for (final path in paths) 'http://$host:8080/$path',
+    ];
   }
 }

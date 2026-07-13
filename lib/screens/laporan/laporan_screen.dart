@@ -6,10 +6,105 @@ import '../../services/app_api.dart';
 import '../../theme/app_theme.dart';
 import '../../widgets/common_widgets.dart';
 
-class LaporanScreen extends StatelessWidget {
+class LaporanScreen extends StatefulWidget {
   final AppBootstrap bootstrap;
 
   const LaporanScreen({super.key, required this.bootstrap});
+
+  @override
+  State<LaporanScreen> createState() => _LaporanScreenState();
+}
+
+class _LaporanScreenState extends State<LaporanScreen> {
+  late AppBootstrap _bootstrap;
+  String _selectedCategory = 'Semua Kategori';
+  String _selectedStatus = 'Semua Status';
+  String _selectedPriority = 'Semua Prioritas';
+
+  @override
+  void initState() {
+    super.initState();
+    _bootstrap = widget.bootstrap;
+  }
+
+  List<ReportTargetRow> get _filteredTargets {
+    return _bootstrap.report.targets.where((target) {
+      final categoryMatches = _selectedCategory == 'Semua Kategori' || target.category == _selectedCategory;
+      final statusMatches = _selectedStatus == 'Semua Status' || target.status == _selectedStatus;
+      final priorityMatches = _selectedPriority == 'Semua Prioritas' || target.priority == _selectedPriority;
+      return categoryMatches && statusMatches && priorityMatches;
+    }).toList();
+  }
+
+  List<String> get _categoryOptions {
+    final options = <String>{'Semua Kategori'};
+    for (final target in _bootstrap.report.targets) {
+      options.add(target.category);
+    }
+    return options.toList();
+  }
+
+  List<String> get _statusOptions {
+    final options = <String>{'Semua Status'};
+    for (final target in _bootstrap.report.targets) {
+      options.add(target.status);
+    }
+    return options.toList();
+  }
+
+  List<String> get _priorityOptions {
+    final options = <String>{'Semua Prioritas'};
+    for (final target in _bootstrap.report.targets) {
+      options.add(target.priority);
+    }
+    return options.toList();
+  }
+
+  void _resetFilters() {
+    setState(() {
+      _selectedCategory = 'Semua Kategori';
+      _selectedStatus = 'Semua Status';
+      _selectedPriority = 'Semua Prioritas';
+    });
+  }
+
+  Widget _buildFilterDropdown({
+    required String label,
+    required String value,
+    required List<String> items,
+    required ValueChanged<String?> onChanged,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: AppTextStyles.caption),
+        const SizedBox(height: 4),
+        DropdownButtonFormField<String>(
+          value: value,
+          items: items
+              .map((item) => DropdownMenuItem<String>(
+                    value: item,
+                    child: Text(item, overflow: TextOverflow.ellipsis),
+                  ))
+              .toList(),
+          onChanged: onChanged,
+          decoration: InputDecoration(
+            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            filled: true,
+            fillColor: AppColors.surface,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(8),
+              borderSide: const BorderSide(color: AppColors.border),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,13 +186,13 @@ class LaporanScreen extends StatelessWidget {
                 childAspectRatio: isDesktop ? 1.4 : 1.55,
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                children: [
-                  StatCard(
+                    children: [
+                      StatCard(
                     iconBg: Color(0xFFDCFCE7),
                     icon: Icons.track_changes_rounded,
                     iconColor: AppColors.primary,
                     title: 'Total Target',
-                    value: '${bootstrap.summary.totalTargets}',
+                    value: '${_bootstrap.summary.totalTargets}',
                     subtitle: 'Semua target aktif',
                   ),
                   StatCard(
@@ -105,24 +200,24 @@ class LaporanScreen extends StatelessWidget {
                     icon: Icons.check_circle_outline_rounded,
                     iconColor: AppColors.secondary,
                     title: 'Selesai',
-                    value: '${bootstrap.summary.completedTargets}',
-                    subtitle: '${bootstrap.summary.completedPercentLabel} dari total',
+                    value: '${_bootstrap.summary.completedTargets}',
+                    subtitle: '${_bootstrap.summary.completedPercentLabel} dari total',
                   ),
                   StatCard(
                     iconBg: Color(0xFFFFFBEB),
                     icon: Icons.timelapse_rounded,
                     iconColor: AppColors.warning,
                     title: 'Sedang Berjalan',
-                    value: '${bootstrap.summary.inProgressTargets}',
-                    subtitle: '${bootstrap.summary.inProgressPercentLabel} dari total',
+                    value: '${_bootstrap.summary.inProgressTargets}',
+                    subtitle: '${_bootstrap.summary.inProgressPercentLabel} dari total',
                   ),
                   StatCard(
                     iconBg: Color(0xFFFFF1F2),
                     icon: Icons.radio_button_unchecked_rounded,
                     iconColor: AppColors.danger,
                     title: 'Belum Dimulai',
-                    value: '${bootstrap.summary.notStartedTargets}',
-                    subtitle: '${bootstrap.summary.notStartedPercentLabel} dari total',
+                    value: '${_bootstrap.summary.notStartedTargets}',
+                    subtitle: '${_bootstrap.summary.notStartedPercentLabel} dari total',
                   ),
                   if (isDesktop)
                     _buildAverageCardItem()
@@ -189,7 +284,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildAverageCardItem() {
-    final stats = bootstrap.summary;
+    final stats = _bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -231,90 +326,75 @@ class LaporanScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(12),
         border: Border.all(color: AppColors.border),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.textSecondary),
-          const SizedBox(width: 8),
-          const Text('Filter Laporan', style: AppTextStyles.h3),
-          const SizedBox(width: 24),
-          Expanded(
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Row(
-                      children: [
-                        Expanded(child: Text('Semua Kategori', style: TextStyle(fontSize: 12, color: AppColors.textSecondary))),
-                        Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Row(
-                      children: [
-                        Expanded(child: Text('Semua Status', style: TextStyle(fontSize: 12, color: AppColors.textSecondary))),
-                        Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: const Row(
-                      children: [
-                        Expanded(child: Text('Semua Prioritas', style: TextStyle(fontSize: 12, color: AppColors.textSecondary))),
-                        Icon(Icons.keyboard_arrow_down, size: 16, color: AppColors.textMuted),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          const Row(
+            children: [
+              Icon(Icons.filter_alt_outlined, size: 18, color: AppColors.textSecondary),
+              SizedBox(width: 8),
+              Text('Filter Laporan', style: AppTextStyles.h3),
+            ],
           ),
-          const SizedBox(width: 16),
-          PrimaryButton(
-            label: 'Terapkan Filter',
-            icon: Icons.filter_alt,
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Filter laporan belum tersedia'),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildFilterDropdown(
+                  label: 'Kategori',
+                  value: _selectedCategory,
+                  items: _categoryOptions,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _selectedCategory = value);
+                  },
                 ),
-              );
-            },
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildFilterDropdown(
+                  label: 'Status',
+                  value: _selectedStatus,
+                  items: _statusOptions,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _selectedStatus = value);
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildFilterDropdown(
+                  label: 'Prioritas',
+                  value: _selectedPriority,
+                  items: _priorityOptions,
+                  onChanged: (value) {
+                    if (value == null) return;
+                    setState(() => _selectedPriority = value);
+                  },
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 12),
-          TextButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Reset filter belum tersedia'),
-                ),
-              );
-            },
-            child: const Text('Reset', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              PrimaryButton(
+                label: 'Terapkan Filter',
+                icon: Icons.filter_alt,
+                onTap: () {
+                  final count = _filteredTargets.length;
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Menampilkan $count target sesuai filter')),
+                  );
+                },
+              ),
+              const SizedBox(width: 12),
+              TextButton(
+                onPressed: _resetFilters,
+                child: const Text('Reset', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
+              ),
+            ],
           ),
         ],
       ),
@@ -322,7 +402,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildDonutChartCard() {
-    final stats = bootstrap.summary;
+    final stats = _bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -385,7 +465,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildProgresPerKategoriCard() {
-    final categories = bootstrap.report.categoryProgress;
+    final categories = _bootstrap.report.categoryProgress;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -405,7 +485,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildRingkasanPerKategoriCard() {
-    final list = bootstrap.report.categoryProgress.take(3).toList();
+    final list = _bootstrap.report.categoryProgress.take(3).toList();
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -466,7 +546,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildAverageCard() {
-    final stats = bootstrap.summary;
+    final stats = _bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -518,36 +598,54 @@ class LaporanScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(child: _DropdownItem(label: 'Kategori', value: 'Semua Kategori')),
-              const SizedBox(width: 8),
-              Expanded(child: _DropdownItem(label: 'Status', value: 'Semua Status')),
-            ],
+          _buildFilterDropdown(
+            label: 'Kategori',
+            value: _selectedCategory,
+            items: _categoryOptions,
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedCategory = value);
+            },
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 10),
+          _buildFilterDropdown(
+            label: 'Status',
+            value: _selectedStatus,
+            items: _statusOptions,
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedStatus = value);
+            },
+          ),
+          const SizedBox(height: 10),
+          _buildFilterDropdown(
+            label: 'Prioritas',
+            value: _selectedPriority,
+            items: _priorityOptions,
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedPriority = value);
+            },
+          ),
+          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(child: _DropdownItem(label: 'Prioritas', value: 'Semua Prioritas')),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: BorderRadius.circular(8),
+              Expanded(
+                child: PrimaryButton(
+                  label: 'Terapkan Filter',
+                  icon: Icons.filter_alt,
+                  onTap: () {
+                    final count = _filteredTargets.length;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Menampilkan $count target sesuai filter')),
+                    );
+                  },
                 ),
-                child: const Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(Icons.filter_alt_rounded, color: Colors.white, size: 14),
-                    SizedBox(width: 4),
-                    Text('Terapkan Filter',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
-                  ],
-                ),
+              ),
+              const SizedBox(width: 10),
+              TextButton(
+                onPressed: _resetFilters,
+                child: const Text('Reset', style: TextStyle(fontSize: 12, color: AppColors.textMuted)),
               ),
             ],
           ),
@@ -666,7 +764,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildTargetList() {
-    final targets = bootstrap.report.targets;
+    final targets = _filteredTargets;
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -700,7 +798,9 @@ class LaporanScreen extends StatelessWidget {
           const SizedBox(height: 12),
           Center(
             child: Text(
-              'Menampilkan 1 - ${targets.length} dari ${bootstrap.summary.totalTargets} target',
+              targets.isEmpty
+                  ? 'Tidak ada target yang cocok dengan filter'
+                  : 'Menampilkan ${targets.length} target dari ${_bootstrap.summary.totalTargets}',
               style: AppTextStyles.caption,
             ),
           ),
@@ -783,7 +883,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildAchievement(BuildContext context) {
-    final stats = bootstrap.summary;
+    final stats = _bootstrap.summary;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -856,8 +956,8 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Widget _buildTrenProgres() {
-    final months = bootstrap.report.trends.map((item) => item['label'] ?? '').toList();
-    final values = bootstrap.report.trends.map((item) => int.tryParse(item['value'] ?? '0') ?? 0).toList();
+    final months = _bootstrap.report.trends.map((item) => item.label).toList();
+    final values = _bootstrap.report.trends.map((item) => item.value).toList();
     if (values.isEmpty) {
       return Container(
         padding: const EdgeInsets.all(14),
@@ -929,7 +1029,7 @@ class LaporanScreen extends StatelessWidget {
 
   Future<void> _exportReport(BuildContext context) async {
     try {
-      final export = await AppApi.instance.exportReport(userId: bootstrap.user.id);
+      final export = await AppApi.instance.exportReport(userId: _bootstrap.user.id);
       final file = File('${Directory.systemTemp.path}/${export.filename}');
       await file.writeAsString(export.content, flush: true);
       if (!context.mounted) return;
@@ -950,7 +1050,7 @@ class LaporanScreen extends StatelessWidget {
   }
 
   Future<void> _showAchievementDetails(BuildContext context) async {
-    final stats = bootstrap.summary;
+    final stats = _bootstrap.summary;
     await showDialog<void>(
       context: context,
       builder: (dialogContext) {

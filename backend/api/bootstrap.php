@@ -44,7 +44,7 @@ $dashboardMotivation = fetch_one(
 ];
 
 $todayTargets = fetch_all(
-    'SELECT icon_name AS icon, icon_bg AS iconBg, icon_color AS iconColor, title, category, category_color AS categoryColor, priority, deadline, progress, progress_label AS progressLabel, status, status_color AS statusColor
+    'SELECT id, icon_name AS icon, icon_bg AS iconBg, icon_color AS iconColor, title, category, category_color AS categoryColor, priority, deadline, progress, progress_label AS progressLabel, status, status_color AS statusColor
      FROM targets
      WHERE user_id = :userId
      ORDER BY sort_order ASC, id ASC
@@ -53,7 +53,7 @@ $todayTargets = fetch_all(
 );
 
 $categories = fetch_all(
-    'SELECT icon_name AS icon, icon_bg AS iconBg, icon_color AS iconColor, name, description, jumlah_target AS jumlahTarget, status
+    'SELECT id, icon_name AS icon, icon_bg AS iconBg, icon_color AS iconColor, name, description, jumlah_target AS jumlahTarget, status
      FROM target_categories
      WHERE user_id = :userId
      ORDER BY sort_order ASC, id ASC',
@@ -61,7 +61,7 @@ $categories = fetch_all(
 );
 
 $quotes = fetch_all(
-    'SELECT category, category_color AS categoryColor, quote AS text, date_label AS date, liked
+    'SELECT id, category, category_color AS categoryColor, quote AS text, date_label AS date, liked
      FROM dashboard_quotes
      WHERE user_id = :userId
      ORDER BY sort_order ASC, id ASC',
@@ -69,7 +69,7 @@ $quotes = fetch_all(
 );
 
 $reportTargets = fetch_all(
-    'SELECT icon_name AS icon, icon_color AS iconColor, title, category, category_color AS categoryColor, deadline, progress, status, status_color AS statusColor
+    'SELECT id, icon_name AS icon, icon_color AS iconColor, title, category, category_color AS categoryColor, priority, deadline, progress, status, status_color AS statusColor
      FROM targets
      WHERE user_id = :userId
      ORDER BY sort_order ASC, id ASC

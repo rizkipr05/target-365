@@ -27,9 +27,12 @@ if ($identity === '' || $password === '') {
 $user = fetch_one(
     'SELECT id, name, username, email, password, role, avatar_url
      FROM users
-     WHERE email = :identity OR username = :identity
+     WHERE email = :identity_email OR username = :identity_username
      LIMIT 1',
-    ['identity' => $identity]
+    [
+        'identity_email' => $identity,
+        'identity_username' => $identity,
+    ]
 );
 
 if ($user === null) {
@@ -68,4 +71,3 @@ json_response([
         ],
     ],
 ]);
-

@@ -18,15 +18,71 @@ class _KalenderScreenState extends State<KalenderScreen> {
   late int _selectedDay;
   late int _currentMonth;
   late int _currentYear;
+  String _selectedTypeFilter = 'Semua Jenis';
+  String _selectedDayFilter = 'Semua Hari';
 
   Map<int, List<_EventData>> get _events => _bootstrap.calendar.groupedEntries.map(
         (day, entries) => MapEntry(
           day,
           entries
-              .map((entry) => _EventData(entry.id, entry.title, entry.color, entry.time, entry.type))
+              .map((entry) => _EventData(day, entry.id, entry.title, entry.color, entry.time, entry.type))
+              .where(_matchesFilter)
               .toList(),
         ),
       );
+
+  List<_EventData> get _allFilteredEvents {
+    final events = <_EventData>[];
+    for (final entry in _bootstrap.calendar.groupedEntries.entries) {
+      for (final event in entry.value) {
+        final data = _EventData(entry.key, event.id, event.title, event.color, event.time, event.type);
+        if (_matchesFilter(data)) {
+          events.add(data);
+        }
+      }
+    }
+    return events;
+  }
+
+  List<String> get _typeOptions {
+    final values = <String>{'Semua Jenis'};
+    for (final event in _allFilteredOrAllEntries()) {
+      values.add(event.type);
+    }
+    return values.toList();
+  }
+
+  List<String> get _dayOptions {
+    final values = <String>{'Semua Hari'};
+    for (final event in _allFilteredOrAllEntries()) {
+      values.add('${event.day}');
+    }
+    final list = values.toList();
+    list.sort((a, b) {
+      if (a == 'Semua Hari') return -1;
+      if (b == 'Semua Hari') return 1;
+      return int.parse(a).compareTo(int.parse(b));
+    });
+    return list;
+  }
+
+  List<_EventData> _allFilteredOrAllEntries() {
+    final events = <_EventData>[];
+    for (final entry in _bootstrap.calendar.groupedEntries.entries) {
+      for (final event in entry.value) {
+        events.add(_EventData(entry.key, event.id, event.title, event.color, event.time, event.type));
+      }
+    }
+    return events;
+  }
+
+  bool _matchesFilter(_EventData event) {
+    final typeMatches = _selectedTypeFilter == 'Semua Jenis' || event.type == _selectedTypeFilter;
+    final dayMatches = _selectedDayFilter == 'Semua Hari' || '${event.day}' == _selectedDayFilter;
+    return typeMatches && dayMatches;
+  }
+
+  String get _monthLabel => _monthName(_currentMonth, _currentYear);
 
   @override
   void initState() {
@@ -199,50 +255,39 @@ class _KalenderScreenState extends State<KalenderScreen> {
               const SizedBox(width: 8),
               const Expanded(child: Text('Filter Kegiatan', style: AppTextStyles.h3)),
               TextButton(
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Reset filter kalender belum tersedia'),
-                    ),
-                  );
-                },
+                onPressed: () => setState(() {
+                  _selectedTypeFilter = 'Semua Jenis';
+                  _selectedDayFilter = 'Semua Hari';
+                }),
                 child: const Text('Reset', style: TextStyle(fontSize: 11)),
               ),
             ],
           ),
           const SizedBox(height: 10),
-          const Text('Kategori', style: AppTextStyles.label),
+          const Text('Hari', style: AppTextStyles.label),
           const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Row(
-              children: [
-                Expanded(child: Text('Semua Kategori', style: TextStyle(fontSize: 11, color: AppColors.textSecondary))),
-                Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textMuted),
-              ],
-            ),
+          DropdownButtonFormField<String>(
+            value: _selectedDayFilter,
+            items: _dayOptions
+                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedDayFilter = value);
+            },
           ),
           const SizedBox(height: 12),
           const Text('Jenis', style: AppTextStyles.label),
           const SizedBox(height: 6),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: const Row(
-              children: [
-                Expanded(child: Text('Semua Jenis', style: TextStyle(fontSize: 11, color: AppColors.textSecondary))),
-                Icon(Icons.keyboard_arrow_down, size: 14, color: AppColors.textMuted),
-              ],
-            ),
+          DropdownButtonFormField<String>(
+            value: _selectedTypeFilter,
+            items: _typeOptions
+                .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                .toList(),
+            onChanged: (value) {
+              if (value == null) return;
+              setState(() => _selectedTypeFilter = value);
+            },
           ),
         ],
       ),
@@ -377,19 +422,13 @@ class _KalenderScreenState extends State<KalenderScreen> {
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
         Text(
-          _bootstrap.calendar.monthLabel,
+          _monthLabel,
           style: AppTextStyles.h2,
         ),
         Row(
           children: [
             GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Pindah bulan belum tersedia'),
-                  ),
-                );
-              },
+              onTap: () => _moveMonth(-1),
               child: Container(
                 width: 32,
                 height: 32,
@@ -403,13 +442,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Pindah bulan belum tersedia'),
-                  ),
-                );
-              },
+              onTap: () => _moveMonth(1),
               child: Container(
                 width: 32,
                 height: 32,
@@ -559,7 +592,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
   }
 
   Widget _buildTodayEvents() {
-    final events = _bootstrap.calendar.entriesForDay(_selectedDay);
+    final events = _eventsForDay(_selectedDay);
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
@@ -588,7 +621,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              Text('$_selectedDay ${_bootstrap.calendar.monthLabel}',
+              Text('$_selectedDay $_monthLabel',
                   style: AppTextStyles.h3),
             ],
           ),
@@ -601,6 +634,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
                 padding: EdgeInsets.only(bottom: entry.key < events.length - 1 ? 8 : 0),
                 child: _buildEventItem(
                   _EventData(
+                    _selectedDay,
                     entry.value.id,
                     entry.value.title,
                     entry.value.color,
@@ -612,13 +646,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
             }),
           const SizedBox(height: 12),
           GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Detail kegiatan harian belum tersedia'),
-                ),
-              );
-            },
+            onTap: _showAllEventsDialog,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -743,13 +771,7 @@ class _KalenderScreenState extends State<KalenderScreen> {
           }),
           const SizedBox(height: 12),
           GestureDetector(
-            onTap: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Lihat semua deadline belum tersedia'),
-                ),
-              );
-            },
+            onTap: _showDeadlinesDialog,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 10),
@@ -1017,6 +1039,179 @@ class _KalenderScreenState extends State<KalenderScreen> {
     }
   }
 
+  List<_EventData> _eventsForDay(int day) {
+    return _events[day] ?? const [];
+  }
+
+  void _moveMonth(int delta) {
+    setState(() {
+      _currentMonth += delta;
+      if (_currentMonth < 1) {
+        _currentMonth = 12;
+        _currentYear -= 1;
+      } else if (_currentMonth > 12) {
+        _currentMonth = 1;
+        _currentYear += 1;
+      }
+    });
+  }
+
+  String _monthName(int month, int year) {
+    const names = [
+      'Januari',
+      'Februari',
+      'Maret',
+      'April',
+      'Mei',
+      'Juni',
+      'Juli',
+      'Agustus',
+      'September',
+      'Oktober',
+      'November',
+      'Desember',
+    ];
+    final index = month.clamp(1, 12) - 1;
+    return '${names[index]} $year';
+  }
+
+  Future<void> _showDayEventsDialog(int day) async {
+    final events = _eventsForDay(day);
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: Text('Kegiatan Hari $day'),
+          content: SizedBox(
+            width: 520,
+            child: events.isEmpty
+                ? const Text('Tidak ada kegiatan pada hari ini')
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: events.length,
+                    separatorBuilder: (_, __) => const Divider(height: 12),
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(color: event.color, shape: BoxShape.circle),
+                        ),
+                        title: Text(event.title),
+                        subtitle: Text('${event.time} • ${event.type}'),
+                        trailing: PopupMenuButton<String>(
+                          onSelected: (value) {
+                            Navigator.pop(dialogContext);
+                            if (value == 'edit') {
+                              _showCalendarEventDialog(day: day, event: event);
+                            } else if (value == 'delete') {
+                              _deleteCalendarEvent(event);
+                            }
+                          },
+                          itemBuilder: (context) => const [
+                            PopupMenuItem(value: 'edit', child: Text('Edit')),
+                            PopupMenuItem(value: 'delete', child: Text('Hapus')),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showDeadlinesDialog() async {
+    final deadlines = _bootstrap.calendar.deadlines;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Deadline Terdekat'),
+          content: SizedBox(
+            width: 520,
+            child: deadlines.isEmpty
+                ? const Text('Belum ada deadline')
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: deadlines.length,
+                    separatorBuilder: (_, __) => const Divider(height: 12),
+                    itemBuilder: (context, index) {
+                      final deadline = deadlines[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(color: deadline.color, shape: BoxShape.circle),
+                        ),
+                        title: Text(deadline.title),
+                        subtitle: Text('${deadline.date} • ${deadline.remaining}'),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showAllEventsDialog() async {
+    final events = _allFilteredEvents;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Semua Kegiatan'),
+          content: SizedBox(
+            width: 560,
+            child: events.isEmpty
+                ? const Text('Tidak ada kegiatan sesuai filter')
+                : ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: events.length,
+                    separatorBuilder: (_, __) => const Divider(height: 12),
+                    itemBuilder: (context, index) {
+                      final event = events[index];
+                      return ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(color: event.color, shape: BoxShape.circle),
+                        ),
+                        title: Text(event.title),
+                        subtitle: Text('Hari ${event.day} • ${event.time} • ${event.type}'),
+                      );
+                    },
+                  ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext),
+              child: const Text('Tutup'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Color _colorForEventType(String type) {
     switch (type) {
       case 'Motivasi':
@@ -1034,13 +1229,14 @@ class _KalenderScreenState extends State<KalenderScreen> {
 }
 
 class _EventData {
+  final int day;
   final int id;
   final String title;
   final Color color;
   final String time;
   final String type;
 
-  const _EventData(this.id, this.title, this.color, this.time, this.type);
+  const _EventData(this.day, this.id, this.title, this.color, this.time, this.type);
 }
 
 class _LegendaItem {

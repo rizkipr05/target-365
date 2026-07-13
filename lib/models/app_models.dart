@@ -300,6 +300,7 @@ class SummaryStats {
 }
 
 class TargetItem {
+  final int id;
   final IconData icon;
   final Color iconBg;
   final Color iconColor;
@@ -314,6 +315,7 @@ class TargetItem {
   final Color statusColor;
 
   const TargetItem({
+    required this.id,
     required this.icon,
     required this.iconBg,
     required this.iconColor,
@@ -330,6 +332,7 @@ class TargetItem {
 
   factory TargetItem.fromJson(Map<String, dynamic> json) {
     return TargetItem(
+      id: _intValue(json['id']),
       icon: iconFromName(_stringValue(json['icon'])),
       iconBg: colorFromHex(_stringValue(json['iconBg'])),
       iconColor: colorFromHex(_stringValue(json['iconColor'])),
@@ -346,6 +349,7 @@ class TargetItem {
   }
 
   Map<String, dynamic> toJson() => {
+        'id': id,
         'icon': icon.fontFamily,
         'iconBg': colorToHex(iconBg),
         'iconColor': colorToHex(iconColor),
@@ -362,6 +366,7 @@ class TargetItem {
 }
 
 class CategoryItem {
+  final int id;
   final IconData icon;
   final Color iconBg;
   final Color iconColor;
@@ -371,6 +376,7 @@ class CategoryItem {
   final String status;
 
   const CategoryItem({
+    required this.id,
     required this.icon,
     required this.iconBg,
     required this.iconColor,
@@ -382,6 +388,7 @@ class CategoryItem {
 
   factory CategoryItem.fromJson(Map<String, dynamic> json) {
     return CategoryItem(
+      id: _intValue(json['id']),
       icon: iconFromName(_stringValue(json['icon'])),
       iconBg: colorFromHex(_stringValue(json['iconBg'])),
       iconColor: colorFromHex(_stringValue(json['iconColor'])),
@@ -394,6 +401,7 @@ class CategoryItem {
 }
 
 class MotivationQuote {
+  final int id;
   final String category;
   final Color categoryColor;
   final String text;
@@ -401,6 +409,7 @@ class MotivationQuote {
   final bool liked;
 
   const MotivationQuote({
+    required this.id,
     required this.category,
     required this.categoryColor,
     required this.text,
@@ -410,6 +419,7 @@ class MotivationQuote {
 
   factory MotivationQuote.fromJson(Map<String, dynamic> json) {
     return MotivationQuote(
+      id: _intValue(json['id']),
       category: _stringValue(json['category']),
       categoryColor: colorFromHex(_stringValue(json['categoryColor'])),
       text: _stringValue(json['text']),
@@ -493,6 +503,7 @@ class ReportTargetRow {
   final String title;
   final String category;
   final Color categoryColor;
+  final String priority;
   final String deadline;
   final double progress;
   final String status;
@@ -504,6 +515,7 @@ class ReportTargetRow {
     required this.title,
     required this.category,
     required this.categoryColor,
+    required this.priority,
     required this.deadline,
     required this.progress,
     required this.status,
@@ -517,10 +529,28 @@ class ReportTargetRow {
       title: _stringValue(json['title']),
       category: _stringValue(json['category']),
       categoryColor: colorFromHex(_stringValue(json['categoryColor'])),
+      priority: _stringValue(json['priority']),
       deadline: _stringValue(json['deadline']),
       progress: _doubleValue(json['progress']),
       status: _stringValue(json['status']),
       statusColor: colorFromHex(_stringValue(json['statusColor'])),
+    );
+  }
+}
+
+class ReportTrendPoint {
+  final String label;
+  final int value;
+
+  const ReportTrendPoint({
+    required this.label,
+    required this.value,
+  });
+
+  factory ReportTrendPoint.fromJson(Map<String, dynamic> json) {
+    return ReportTrendPoint(
+      label: _stringValue(json['label']),
+      value: _intValue(json['value']),
     );
   }
 }
@@ -530,7 +560,7 @@ class ReportData {
   final String completionLabel;
   final List<ReportCategoryProgress> categoryProgress;
   final List<ReportTargetRow> targets;
-  final List<Map<String, String>> trends;
+  final List<ReportTrendPoint> trends;
 
   const ReportData({
     required this.completion,
@@ -551,7 +581,7 @@ class ReportData {
           .map((item) => ReportTargetRow.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList(),
       trends: (json['trends'] as List<dynamic>? ?? const [])
-          .map((item) => Map<String, String>.from(item as Map))
+          .map((item) => ReportTrendPoint.fromJson(Map<String, dynamic>.from(item as Map)))
           .toList(),
     );
   }

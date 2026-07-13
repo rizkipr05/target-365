@@ -24,6 +24,21 @@ class _TargetScreenState extends State<TargetScreen> {
     _bootstrap = widget.bootstrap;
   }
 
+  List<TargetItem> get _filteredTargets {
+    return _bootstrap.targets.where((target) {
+      switch (_selectedFilter) {
+        case 'Berjalan':
+          return target.status == 'Sedang Berjalan';
+        case 'Selesai':
+          return target.status == 'Selesai';
+        case 'Belum Dimulai':
+          return target.status == 'Belum Dimulai';
+        default:
+          return true;
+      }
+    }).toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
@@ -96,7 +111,26 @@ class _TargetScreenState extends State<TargetScreen> {
   }
 
   List<Widget> _buildTargetList() {
-    final targets = _bootstrap.targets;
+    final targets = _filteredTargets;
+    if (targets.isEmpty) {
+      return [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: AppColors.cardBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: const Center(
+            child: Text(
+              'Tidak ada target yang cocok dengan filter',
+              style: AppTextStyles.bodySmall,
+            ),
+          ),
+        ),
+      ];
+    }
+
     return targets
         .asMap()
         .entries
@@ -104,18 +138,7 @@ class _TargetScreenState extends State<TargetScreen> {
           (entry) => Padding(
             padding: EdgeInsets.only(bottom: entry.key < targets.length - 1 ? 12 : 0),
             child: _buildTargetCard(
-              icon: entry.value.icon,
-              iconBg: entry.value.iconBg,
-              iconColor: entry.value.iconColor,
-              title: entry.value.title,
-              category: entry.value.category,
-              categoryColor: entry.value.categoryColor,
-              priority: entry.value.priority,
-              deadline: entry.value.deadline,
-              progress: entry.value.progress,
-              progressLabel: entry.value.progressLabel,
-              status: entry.value.status,
-              statusColor: entry.value.statusColor,
+              target: entry.value,
             ),
           ),
         )
@@ -125,9 +148,10 @@ class _TargetScreenState extends State<TargetScreen> {
   Future<void> _showAddTargetDialog() async {
     final titleController = TextEditingController();
     final deadlineController = TextEditingController();
-    String selectedCategory = _bootstrap.categories.isNotEmpty
-        ? _bootstrap.categories.first.name
-        : 'Pengembangan Diri';
+    final categories = _bootstrap.categories.isNotEmpty
+        ? _bootstrap.categories.map((category) => category.name).toList()
+        : ['Pengembangan Diri'];
+    String selectedCategory = categories.first;
     String selectedPriority = 'Sedang';
 
     try {
@@ -152,10 +176,10 @@ class _TargetScreenState extends State<TargetScreen> {
                         DropdownButtonFormField<String>(
                           value: selectedCategory,
                           decoration: const InputDecoration(labelText: 'Kategori'),
-                          items: _bootstrap.categories
+                          items: categories
                               .map((category) => DropdownMenuItem(
-                                    value: category.name,
-                                    child: Text(category.name),
+                                    value: category,
+                                    child: Text(category),
                                   ))
                               .toList(),
                           onChanged: (value) {
@@ -225,6 +249,174 @@ class _TargetScreenState extends State<TargetScreen> {
     }
   }
 
+  Future<void> _showEditTargetDialog(TargetItem target) async {
+    final titleController = TextEditingController(text: target.title);
+    final deadlineController = TextEditingController(text: target.deadline);
+    final progressController = TextEditingController(text: (target.progress * 100).round().toString());
+    final categories = _bootstrap.categories.isNotEmpty
+        ? _bootstrap.categories.map((category) => category.name).toList()
+        : [target.category];
+    String selectedCategory = categories.contains(target.category) ? target.category : categories.first;
+    String selectedPriority = target.priority;
+    String selectedStatus = target.status;
+
+    try {
+      final result = await showDialog<bool>(
+        context: context,
+        builder: (dialogContext) {
+          return StatefulBuilder(
+            builder: (context, setLocalState) {
+              return AlertDialog(
+                title: const Text('Edit Target'),
+                content: SizedBox(
+                  width: 440,
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: titleController,
+                          decoration: const InputDecoration(labelText: 'Judul target'),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: selectedCategory,
+                          decoration: const InputDecoration(labelText: 'Kategori'),
+                          items: categories
+                              .map((category) => DropdownMenuItem(
+                                    value: category,
+                                    child: Text(category),
+                                  ))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setLocalState(() => selectedCategory = value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: selectedPriority,
+                          decoration: const InputDecoration(labelText: 'Prioritas'),
+                          items: const ['Rendah', 'Sedang', 'Tinggi']
+                              .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setLocalState(() => selectedPriority = value);
+                          },
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: deadlineController,
+                          decoration: const InputDecoration(labelText: 'Deadline', hintText: '31 Des 2025'),
+                        ),
+                        const SizedBox(height: 12),
+                        TextField(
+                          controller: progressController,
+                          keyboardType: TextInputType.number,
+                          decoration: const InputDecoration(labelText: 'Progress (%)', hintText: '0 - 100'),
+                        ),
+                        const SizedBox(height: 12),
+                        DropdownButtonFormField<String>(
+                          value: selectedStatus,
+                          decoration: const InputDecoration(labelText: 'Status'),
+                          items: const ['Belum Dimulai', 'Sedang Berjalan', 'Selesai']
+                              .map((value) => DropdownMenuItem(value: value, child: Text(value)))
+                              .toList(),
+                          onChanged: (value) {
+                            if (value == null) return;
+                            setLocalState(() => selectedStatus = value);
+                          },
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(dialogContext, false),
+                    child: const Text('Batal'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => Navigator.pop(dialogContext, true),
+                    child: const Text('Simpan'),
+                  ),
+                ],
+              );
+            },
+          );
+        },
+      );
+
+      if (result != true) return;
+
+      final progressPercent = double.tryParse(progressController.text.trim()) ?? (target.progress * 100);
+      await AppApi.instance.updateTarget({
+        'userId': _bootstrap.user.id,
+        'id': target.id,
+        'title': titleController.text.trim(),
+        'category': selectedCategory,
+        'priority': selectedPriority,
+        'deadline': deadlineController.text.trim(),
+        'status': selectedStatus,
+        'progress': (progressPercent.clamp(0, 100)) / 100,
+      });
+
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() => _bootstrap = refreshed);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Target berhasil diperbarui')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    } finally {
+      titleController.dispose();
+      deadlineController.dispose();
+      progressController.dispose();
+    }
+  }
+
+  Future<void> _deleteTarget(TargetItem target) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Hapus Target'),
+        content: Text('Hapus target "${target.title}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await AppApi.instance.deleteTarget(userId: _bootstrap.user.id, id: target.id);
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() => _bootstrap = refreshed);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Target berhasil dihapus')),
+      );
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
   Widget _buildFilterTabs() {
     return Container(
       color: AppColors.cardBg,
@@ -265,18 +457,7 @@ class _TargetScreenState extends State<TargetScreen> {
   }
 
   Widget _buildTargetCard({
-    required IconData icon,
-    required Color iconBg,
-    required Color iconColor,
-    required String title,
-    required String category,
-    required Color categoryColor,
-    required String priority,
-    required String deadline,
-    required double progress,
-    required String progressLabel,
-    required String status,
-    required Color statusColor,
+    required TargetItem target,
   }) {
     return Container(
       padding: const EdgeInsets.all(14),
@@ -294,17 +475,17 @@ class _TargetScreenState extends State<TargetScreen> {
                 width: 40,
                 height: 40,
                 decoration: BoxDecoration(
-                  color: iconBg,
+                  color: target.iconBg,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: Icon(icon, color: iconColor, size: 22),
+                child: Icon(target.icon, color: target.iconColor, size: 22),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
+                    Text(target.title,
                         style: AppTextStyles.h3,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis),
@@ -315,46 +496,50 @@ class _TargetScreenState extends State<TargetScreen> {
                           padding: const EdgeInsets.symmetric(
                               horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
-                            color: categoryColor.withOpacity(0.1),
+                            color: target.categoryColor.withOpacity(0.1),
                             borderRadius: BorderRadius.circular(4),
                           ),
                           child: Text(
-                            category,
+                            target.category,
                             style: TextStyle(
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
-                                color: categoryColor),
+                                color: target.categoryColor),
                           ),
                         ),
                         const SizedBox(width: 6),
-                        Text('📅 $deadline',
+                        Text('📅 ${target.deadline}',
                             style: AppTextStyles.caption),
                       ],
                     ),
                   ],
                 ),
               ),
-              IconButton(
+              PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert,
                     size: 18, color: AppColors.textMuted),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Aksi target lanjutan belum tersedia'),
-                    ),
-                  );
-                },
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
+                onSelected: (value) {
+                  if (value == 'edit') {
+                    _showEditTargetDialog(target);
+                  } else if (value == 'delete') {
+                    _deleteTarget(target);
+                  }
+                },
+                itemBuilder: (context) => const [
+                  PopupMenuItem(value: 'edit', child: Text('Edit')),
+                  PopupMenuItem(value: 'delete', child: Text('Hapus')),
+                ],
               ),
             ],
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              _priorityBadge(priority),
+              _priorityBadge(target.priority),
               const Spacer(),
-              StatusBadge(label: status, color: statusColor),
+              StatusBadge(label: target.status, color: target.statusColor),
             ],
           ),
           const SizedBox(height: 10),
@@ -364,17 +549,17 @@ class _TargetScreenState extends State<TargetScreen> {
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(5),
                   child: LinearProgressIndicator(
-                    value: progress,
+                    value: target.progress,
                     backgroundColor: AppColors.surface,
-                    color: iconColor,
+                    color: target.iconColor,
                     minHeight: 7,
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-              Text(progressLabel,
+              Text(target.progressLabel,
                   style: AppTextStyles.bodySmall.copyWith(
-                      fontWeight: FontWeight.w700, color: iconColor)),
+                      fontWeight: FontWeight.w700, color: target.iconColor)),
             ],
           ),
         ],

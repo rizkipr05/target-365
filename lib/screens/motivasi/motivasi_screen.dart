@@ -1,4 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../../models/app_models.dart';
 import '../../services/app_api.dart';
 import '../../theme/app_theme.dart';
@@ -16,6 +19,8 @@ class MotivasiScreen extends StatefulWidget {
 class _MotivasiScreenState extends State<MotivasiScreen> {
   late AppBootstrap _bootstrap;
   String _activeTab = 'Semua';
+  bool _showLikedOnly = false;
+  int _currentPage = 0;
   final List<String> _tabs = [
     'Semua', 'Inspirasi', 'Produktivitas', 'Kehidupan', 'Kebiasaan', 'Mindset'
   ];
@@ -29,6 +34,7 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
   List<_QuoteData> get _quotes => _bootstrap.quotes
       .map(
         (q) => _QuoteData(
+          id: q.id,
           category: q.category,
           categoryColor: q.categoryColor,
           text: q.text,
@@ -37,6 +43,53 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
         ),
       )
       .toList();
+
+  List<_QuoteData> get _filteredQuotes {
+    final filtered = _quotes.where((quote) {
+      final matchesTab = _activeTab == 'Semua' || quote.category == _activeTab;
+      final matchesArchive = !_showLikedOnly || quote.liked;
+      return matchesTab && matchesArchive;
+    }).toList();
+
+    return filtered;
+  }
+
+  int get _pageSize => 6;
+
+  int get _pageCount => max(1, (_filteredQuotes.length / _pageSize).ceil());
+
+  List<_QuoteData> get _pagedQuotes {
+    final start = (_currentPage * _pageSize)
+        .clamp(0, max(0, _filteredQuotes.length))
+        .toInt();
+    final end = min(start + _pageSize, _filteredQuotes.length).toInt();
+    if (start >= end) {
+      return const [];
+    }
+    return _filteredQuotes.sublist(start, end);
+  }
+
+  void _applyTab(String tab) {
+    setState(() {
+      _activeTab = tab;
+      _currentPage = 0;
+    });
+  }
+
+  void _toggleArchiveView() {
+    setState(() {
+      _showLikedOnly = !_showLikedOnly;
+      _currentPage = 0;
+    });
+  }
+
+  void _goToPage(int page) {
+    final next = page.clamp(0, _pageCount - 1);
+    if (next == _currentPage) {
+      return;
+    }
+    setState(() => _currentPage = next);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -53,16 +106,10 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
                     Padding(
                       padding: const EdgeInsets.only(right: 8),
                       child: PrimaryButton(
-                        label: 'Arsip',
+                        label: _showLikedOnly ? 'Semua' : 'Arsip',
                         icon: Icons.bookmark_border_rounded,
                         outlined: true,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Arsip motivasi belum tersedia'),
-                            ),
-                          );
-                        },
+                        onTap: _toggleArchiveView,
                       ),
                     ),
                   ],
@@ -86,16 +133,10 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
                       ),
                       const Spacer(),
                       PrimaryButton(
-                        label: 'Arsip Motivasi',
+                        label: _showLikedOnly ? 'Semua Motivasi' : 'Arsip Motivasi',
                         icon: Icons.bookmark_border_rounded,
                         outlined: true,
-                        onTap: () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Arsip motivasi belum tersedia'),
-                            ),
-                          );
-                        },
+                        onTap: _toggleArchiveView,
                       ),
                     ],
                   ),
@@ -180,11 +221,24 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
           const SizedBox(height: 12),
           ...categories.map((c) => InkWell(
                 onTap: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Filter kategori motivasi belum tersedia'),
-                    ),
-                  );
+                  final categoryName = c['name'] as String;
+                  if (categoryName == 'Semua Motivasi') {
+                    setState(() {
+                      _activeTab = 'Semua';
+                      _showLikedOnly = false;
+                      _currentPage = 0;
+                    });
+                    return;
+                  }
+
+                  if (_tabs.contains(categoryName)) {
+                    _applyTab(categoryName);
+                  } else {
+                    setState(() {
+                      _showLikedOnly = false;
+                      _currentPage = 0;
+                    });
+                  }
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8),
@@ -350,28 +404,29 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
     
     // Grid of quote cards, 3 columns on desktop
     final widgets = <Widget>[];
-    for (int i = 0; i < _quotes.length; i += 3) {
+    final quotes = _pagedQuotes;
+    for (int i = 0; i < quotes.length; i += 3) {
       widgets.add(
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _QuoteCard(data: _quotes[i])),
+            Expanded(child: _QuoteCard(data: quotes[i], onToggleLike: _toggleLike, onShare: _shareQuote)),
             const SizedBox(width: 10),
             Expanded(
-              child: i + 1 < _quotes.length
-                  ? _QuoteCard(data: _quotes[i + 1])
+              child: i + 1 < quotes.length
+                  ? _QuoteCard(data: quotes[i + 1], onToggleLike: _toggleLike, onShare: _shareQuote)
                   : const SizedBox(),
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: i + 2 < _quotes.length
-                  ? _QuoteCard(data: _quotes[i + 2])
+              child: i + 2 < quotes.length
+                  ? _QuoteCard(data: quotes[i + 2], onToggleLike: _toggleLike, onShare: _shareQuote)
                   : const SizedBox(),
             ),
           ],
         ),
       );
-      if (i + 3 < _quotes.length) widgets.add(const SizedBox(height: 10));
+      if (i + 3 < quotes.length) widgets.add(const SizedBox(height: 10));
     }
     return widgets;
   }
@@ -444,13 +499,7 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
               IconButton(
                 icon: const Icon(Icons.bookmark_border_rounded,
                     color: AppColors.textSecondary, size: 20),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Simpan motivasi belum tersedia'),
-                    ),
-                  );
-                },
+                onPressed: _toggleArchiveView,
                 padding: EdgeInsets.zero,
                 constraints: const BoxConstraints(),
               ),
@@ -458,11 +507,13 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
               IconButton(
                 icon: const Icon(Icons.share_rounded,
                     color: AppColors.textSecondary, size: 20),
-                onPressed: () {
+                onPressed: () async {
+                  await Clipboard.setData(
+                    ClipboardData(text: '${motivation.quote}\n- ${motivation.author}'),
+                  );
+                  if (!mounted) return;
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Bagikan motivasi belum tersedia'),
-                    ),
+                    const SnackBar(content: Text('Motivasi disalin ke clipboard')),
                   );
                 },
                 padding: EdgeInsets.zero,
@@ -584,101 +635,108 @@ class _MotivasiScreenState extends State<MotivasiScreen> {
 
   List<Widget> _buildQuoteGrid() {
     final widgets = <Widget>[];
-    for (int i = 0; i < _quotes.length; i += 2) {
+    final quotes = _pagedQuotes;
+    for (int i = 0; i < quotes.length; i += 2) {
       widgets.add(
         Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Expanded(child: _QuoteCard(data: _quotes[i])),
+            Expanded(child: _QuoteCard(data: quotes[i], onToggleLike: _toggleLike, onShare: _shareQuote)),
             const SizedBox(width: 10),
             Expanded(
-              child: i + 1 < _quotes.length
-                  ? _QuoteCard(data: _quotes[i + 1])
+              child: i + 1 < quotes.length
+                  ? _QuoteCard(data: quotes[i + 1], onToggleLike: _toggleLike, onShare: _shareQuote)
                   : const SizedBox(),
             ),
           ],
         ),
       );
-      if (i + 2 < _quotes.length) widgets.add(const SizedBox(height: 10));
+      if (i + 2 < quotes.length) widgets.add(const SizedBox(height: 10));
     }
     return widgets;
   }
 
   Widget _buildPagination() {
+    if (_filteredQuotes.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         IconButton(
           icon:
               const Icon(Icons.chevron_left_rounded, color: AppColors.textMuted),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Navigasi halaman motivasi belum tersedia'),
-              ),
-            );
-          },
+          onPressed: _currentPage > 0 ? () => _goToPage(_currentPage - 1) : null,
         ),
-        Container(
-          width: 32,
-          height: 32,
-          decoration: BoxDecoration(
-            color: AppColors.primary,
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: const Center(
-            child: Text('1',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w700)),
-          ),
-        ),
-        const SizedBox(width: 4),
-        ...[2, 3].map(
-          (n) => Padding(
+        ...List.generate(_pageCount, (index) {
+          final isActive = index == _currentPage;
+          return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             child: GestureDetector(
-              onTap: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Navigasi halaman motivasi belum tersedia'),
-                  ),
-                );
-              },
+              onTap: () => _goToPage(index),
               child: Container(
                 width: 32,
                 height: 32,
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: isActive ? AppColors.primary : AppColors.surface,
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Center(
-                  child: Text('$n',
-                      style: AppTextStyles.bodySmall.copyWith(
-                          fontWeight: FontWeight.w600)),
+                  child: Text(
+                    '${index + 1}',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isActive ? Colors.white : AppColors.textSecondary,
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
+          );
+        }),
         IconButton(
           icon: const Icon(Icons.chevron_right_rounded,
               color: AppColors.textMuted),
-          onPressed: () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Navigasi halaman motivasi belum tersedia'),
-              ),
-            );
-          },
+          onPressed: _currentPage < _pageCount - 1 ? () => _goToPage(_currentPage + 1) : null,
         ),
       ],
+    );
+  }
+
+  Future<void> _toggleLike(_QuoteData quote) async {
+    try {
+      await AppApi.instance.toggleMotivationLike(
+        userId: _bootstrap.user.id,
+        quoteId: quote.id,
+        liked: !quote.liked,
+      );
+      final refreshed = await AppApi.instance.refreshBootstrap();
+      if (!mounted) return;
+      setState(() {
+        _bootstrap = refreshed;
+      });
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
+    }
+  }
+
+  Future<void> _shareQuote(_QuoteData quote) async {
+    await Clipboard.setData(
+      ClipboardData(text: '${quote.text}\n- ${quote.category}'),
+    );
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Kutipan disalin ke clipboard')),
     );
   }
 }
 
 class _QuoteData {
+  final int id;
   final String category;
   final Color categoryColor;
   final String text;
@@ -686,6 +744,7 @@ class _QuoteData {
   final bool liked;
 
   const _QuoteData({
+    required this.id,
     required this.category,
     required this.categoryColor,
     required this.text,
@@ -696,8 +755,14 @@ class _QuoteData {
 
 class _QuoteCard extends StatelessWidget {
   final _QuoteData data;
+  final Future<void> Function(_QuoteData quote) onToggleLike;
+  final Future<void> Function(_QuoteData quote) onShare;
 
-  const _QuoteCard({required this.data});
+  const _QuoteCard({
+    required this.data,
+    required this.onToggleLike,
+    required this.onShare,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -747,16 +812,26 @@ class _QuoteCard extends StatelessWidget {
             children: [
               Text(data.date, style: AppTextStyles.caption),
               const Spacer(),
-              Icon(
-                Icons.bookmark_border_rounded,
-                size: 14,
-                color: AppColors.textMuted,
+              IconButton(
+                iconSize: 16,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(
+                  data.liked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                  color: data.liked ? AppColors.primary : AppColors.textMuted,
+                ),
+                onPressed: () => onToggleLike(data),
               ),
               const SizedBox(width: 8),
-              Icon(
-                data.liked ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                size: 14,
-                color: data.liked ? AppColors.danger : AppColors.textMuted,
+              IconButton(
+                iconSize: 16,
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
+                icon: Icon(
+                  Icons.share_rounded,
+                  color: AppColors.textMuted,
+                ),
+                onPressed: () => onShare(data),
               ),
             ],
           ),
